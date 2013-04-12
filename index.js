@@ -6,9 +6,9 @@ if (versionParts[0] === '0' && versionParts[1] === '4') {
 
 module.exports = {
     "Message":          require("./Message"),
-    "AppleMidiMessage": require("./AppleMidiMessage"),
+    "ControlMessage":   require("./ControlMessage"),
     "RTPMessage":       require("./RTPMessage"),
     "RTPMidiMessage":   require("./RTPMidiMessage"),
-    "RTPMidiSession":   require("./RTPMidiSession"),
-    "RTPMidiServer":    require("./RTPMidiServer")
+    "RTPMidiStream":    require("./RTPMidiStream"),
+    "RTPMidiSession":   require("./RTPMidiSession")
 };

@@ -6,28 +6,16 @@ var util            = require("util"),
         0xe0: 2, 0xd0: 1, 0xc0: 1, 0xb0: 2, 0xa0: 2, 0x90: 2, 0x80: 2
     },
     flags = {
-        system_message: 0xf0
+        systemMessage: 0xf0,
+        maskDeltaTimeByte: 0xef,
+        maskLengthInFirstByte: 0x0f,
+        deltaTimeHasNext: 0x80,
+        commandStart: 0x80,
+        bigLength: 0x80,
+        hasJournal: 0x40,
+        firstHasDeltaTime: 0x20,
+        p: 0x10
     };
-
-// Helper functions
-function intToArray(int, numberOfOctets) {
-    var array = [],
-        i = numberOfOctets -1;
-    while (i >= 0) {
-        var div = Math.pow(2, 8 * i);
-        array.push(Math.floor(int / div));
-        int = int % div;
-        i--;
-    }
-    return array;
-}
-
-function pad(string, count) {
-    while (string.length < count) {
-        string = '0' + string;
-    }
-    return string;
-}
 
 function RTPMidiMessage() {
     RTPMessage.apply(this);
@@ -46,39 +34,40 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     RTPMessage.prototype.parseBuffer.apply(this, arguments);
     if (Buffer.isBuffer(buffer)) {
         var payload = this.payload;
-        var bitmask = payload.readInt8(0).toString(2);
-        this.bigLength = !!parseInt(bitmask[0], 2);
-        this.hasJournal = !!parseInt(bitmask[1], 2);
-        this.firstHasDeltaTime = !!parseInt(bitmask[2], 2);
-        this.p = !!parseInt(bitmask[3], 2);
+        var firstByte = payload.readUInt8(0);
+
+        this.bigLength =            !!(firstByte & flags.bigLength);
+        this.hasJournal =           !!(firstByte & flags.hasJournal);
+        this.firstHasDeltaTime =    !!(firstByte & flags.firstHasDeltaTime);
+        this.p =                    !!(firstByte & flags.p);
+
+        this.length = (firstByte & flags.maskLengthInFirstByte);
+
         if (this.bigLength) {
-            this.length = parseInt(bitmask.slice(4) + payload.readInt8(1).toString(2), 2);
-        } else {
-            this.length = parseInt(bitmask.slice(4), 2);
+            this.length = this.length << 8 + payload.readUInt8(1);
         }
 
         // Read the command section
         var commandStartOffset = this.bigLength ? 2 : 1;
         var offset = commandStartOffset;
         var lastStatusByte = null;
+
         while (offset < this.length + commandStartOffset -1) {
-            var command = {};
+            var command = {deltaTime: 0};
             // Decode the delta time
-            if (this.commands.length == 0 && this.firstHasDeltaTime === false) {
-                command.deltaTime = 0;
-            } else {
-                var deltaTimeBitMask = '';
+            if (this.commands.length || this.firstHasDeltaTime) {
                 for (var k = 0; k < 3; k++) {
-                    var currentOctet = payload.readInt8(offset).toString(2);
+                    var currentOctet = payload.readUInt8(offset);
                     offset++;
-                    deltaTimeBitMask += currentOctet.slice(1);
-                    if (currentOctet[1] !== '1') {
+                    command.deltaTime <<= 7;
+                    command.deltaTime += currentOctet & flags.maskDeltaTimeByte;
+                    if (!(currentOctet & flags.deltaTimeHasNext)) {
                         break;
                     }
                 }
-                command.deltaTime = parseInt(deltaTimeBitMask, 2);
             }
-            var statusByte = payload[offset];
+
+            var statusByte = payload.readUInt8(offset);
             var hasOwnStatusByte = (statusByte & 0x80) == 0x80;
             if(hasOwnStatusByte) {
                 lastStatusByte = statusByte;
@@ -97,6 +86,7 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
                 payload.copy(command.data, 1, offset, offset + data_length);
                 offset += data_length;
             }
+
             this.commands.push(command);
         }
     }
@@ -105,29 +95,34 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 
 RTPMidiMessage.prototype.generateBuffer = function generateBuffer() {
     var payload = [],
-        lastStatusOctet = null,
-        i, command,
-        statusByte, lastStatusByte,
-        headerBuffer, buffer;
+        i,
+        command,
+        statusByte,
+        lastStatusByte,
+        bitmask,
+        d,
+        data_length;
 
     for (i = 0; i < this.commands.length; i++) {
         command = this.commands[i];
         if (i == 0 && command.deltaTime === 0) {
             this.firstHasDeltaTime = false;
         } else {
-            var d = command.deltaTime.toString(2);
-            if (command.deltaTime <= 0xef) {
-                payload.push.apply(payload, intToArray(parseInt(d.slice(24), 2), 1));
-            } else if (command.deltaTime <= 0xefff) {
-                payload.push.apply(payload, intToArray(parseInt('1' + d.slice(18, 25) + '0' + d.slice(25)), 2));
-            } else if (command.deltaTime <= 0xefffff) {
-                payload.push.apply(payload, intToArray(parseInt('1' + d.slice(11, 18) + '1' + d.slice(18, 25) + '0' + d.slice(25)), 3));
-            } else if (command.deltaTime <= 0xefffffff) {
-                payload.push.apply(payload, intToArray(parseInt('1' + d.slice( 4, 11) + '1' + d.slice(11, 18) + '1' + '1' + d.slice(18, 25) + '0' + d.slice(25)), 4));
+            d = command.deltaTime;
+
+            if (d >= 0x7fffff) {
+                payload.push((0x80 | d >> 21))
             }
+            if (d >= 0x7fff) {
+                payload.push((0x80 | d >> 14))
+            }
+            if (d >= 0x7f) {
+                payload.push((0x80 | d >> 7))
+            }
+            payload.push(0xef & d);
         }
         statusByte = command.data[0];
-        var data_length = (types_data_length[statusByte & 0xf0] || 0);
+        data_length = (types_data_length[statusByte & 0xf0] || 0);
 
         if (data_length + 1 !== command.data.length) {
             this.isValid = false;
@@ -141,33 +136,23 @@ RTPMidiMessage.prototype.generateBuffer = function generateBuffer() {
         }
     }
 
-    var bitmask = '';
-
     this.bigLength = payload.length > 15;
 
-    bitmask += this.bigLength ? '1' : '0';
-    bitmask += this.hasJournal ? '1' : '0';
-    bitmask += this.firstHasDeltaTime ? '1' : '0';
-    bitmask += this.p ? '1' : '0';
+    bitmask = 0;
+    bitmask |= this.bigLength ? (flags.bigLength | payload.length >> 8) : payload.length;
+    bitmask |= this.hasJournal ? flags.hasJournal : 0;
+    bitmask |= this.firstHasDeltaTime ? flags.firstHasDeltaTime : 0;
+    bitmask |= this.p ? flags.p : 0;
 
-    bitmask += pad(payload.length.toString(2), this.bigLength ? 12 : 4);
-    var bytes = intToArray(parseInt(bitmask, 2), this.bigLength ? 2 : 1);
-
-    buffer = new Buffer(payload.length + bytes.length);
-    for (i = 0; i < bytes.length; i++) {
-        buffer[i] = bytes[i];
+    if (this.bigLength) {
+        payload.unshift(0xff & payload.length, 1);
     }
 
-    for (i = 0; i < payload.length; i++) {
-        buffer[i + bytes.length] = payload[i];
-    }
-    this.payload = buffer;
+    payload.unshift(bitmask);
+    this.payload = new Buffer(payload);
 
     RTPMessage.prototype.generateBuffer.apply(this);
     return this;
 };
 
 module.exports = RTPMidiMessage;
-
-
-

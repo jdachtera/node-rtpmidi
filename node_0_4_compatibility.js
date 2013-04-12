@@ -21,6 +21,10 @@
 
 var assert = require('assert');
 
+process.stdin.setRawMode = function() {
+    require('tty').setRawMode(true);
+};
+
 Buffer.prototype.readUInt8 = function(offset, noAssert) {
 	var buffer = this;
 

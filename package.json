@@ -2,13 +2,17 @@
     "name": "rtpmidi",
     "version": "0.0.1",
     "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
-    "description": "A server for sending and receiving Core Midi messages through the network",
-    "main": "index.js",
+    "description": "A server for sending and receiving RTP Midi messages through the network",
+    "main" : "./index.js",
+    "repository" : {
+        "type" : "git",
+        "url" : "http://github.com/jdachtera/node-rtpmidi.git"
+    },
     "keywords": [
         "midi"
     ],
     "license": "MIT",
     "engines": {
-        "node": ">=0.4"
+        "node": ">=0.4.0"
     }
 }

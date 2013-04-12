@@ -6,7 +6,7 @@ var util            = require("util"),
         invitation: 0x494E,
         invitation_rejected: 0x4E4F,
         invitation_accepted: 20299,
-        endsession: 0x4259,
+        end: 0x4259,
         synchronization: 0x434B,
         receiver_feedback: 0x5253,
         bitrate_receive_limit: 0x524C
@@ -15,18 +15,18 @@ var util            = require("util"),
 		start: 0xFFFF
 	};
 
-function AppleMidiMessage(buffer) {
+function ControlMessage(buffer) {
     Message.apply(this);
     this.start = flags.start;
     this.version = 2;
 }
 
-util.inherits(AppleMidiMessage, Message);
+util.inherits(ControlMessage, Message);
 
-AppleMidiMessage.prototype.name = '';
-AppleMidiMessage.prototype.isValid = true;
+ControlMessage.prototype.name = '';
+ControlMessage.prototype.isValid = true;
 
-AppleMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
+ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     this.buffer = buffer;
     if (Buffer.isBuffer(buffer)) {
         this.start = buffer.readUInt16BE(0);
@@ -44,7 +44,7 @@ AppleMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             case 'invitation':
             case 'invitation_accepted':
             case 'invitation_rejected':
-            case 'endsession':
+            case 'end':
                 this.version = buffer.readUInt32BE(4);
                 this.token = buffer.readUInt32BE(8);
                 this.ssrc = buffer.readUInt32BE(12);
@@ -62,13 +62,13 @@ AppleMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     return this;
 };
 
-AppleMidiMessage.prototype.generateBuffer = function generateBuffer() {
+ControlMessage.prototype.generateBuffer = function generateBuffer() {
     var buffer;
     switch(this.command) {
         case 'invitation':
         case 'invitation_accepted':
         case 'invitation_rejected':
-        case 'endsession':
+        case 'end':
             buffer = new Buffer(17 + Buffer.byteLength(this.name, 'utf8'));
             buffer.writeUInt16BE(	this.start				, 0);
             buffer.writeUInt16BE(	commands[this.command]	, 2);
@@ -76,7 +76,7 @@ AppleMidiMessage.prototype.generateBuffer = function generateBuffer() {
             buffer.writeUInt32BE(	this.token				, 8);
             buffer.writeUInt32BE(	this.ssrc				, 12);
             buffer.write(			this.name				, 16);
-            if (this.command !== 'endsession') {
+            if (this.command !== 'end') {
                 buffer.writeUInt8(	0						, buffer.length - 1);
             }
             break;
@@ -101,5 +101,5 @@ AppleMidiMessage.prototype.generateBuffer = function generateBuffer() {
     return this;
 };
 
-module.exports = AppleMidiMessage;
+module.exports = ControlMessage;
 
