@@ -1,3 +1,5 @@
+"use strict";
+
 // A Protocol message interface
 function Message() {
 }

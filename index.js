@@ -1,3 +1,5 @@
+"use strict";
+
 // Backported Buffer functions for node 0.4.x
 var versionParts = process.version.split('.');
 if (versionParts[0] === '0' && versionParts[1] === '4') {
