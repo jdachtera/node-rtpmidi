@@ -10,18 +10,21 @@ var mdns                = require('mdns'),
     browser;
 
 
+function sessionDetails(session, index) {
+    return {name: session.name, port: session.port, address: session.addresses && session.addresses[0], host:session.host, index: index};
+}
+
 function MdnsService(){
     browser = mdns.createBrowser(service_id);
 
     browser.on('serviceUp', function(service) {
-        remoteSessions.push(service);
-        this.emit('remoteSessionUp', {session: service});
-        this.emit('remoteSessionsChanged', {sessions: remoteSessions});
+        var index = remoteSessions.push(service);
+        this.emit('remoteSessionUp', sessionDetails(service, index));
     });
     browser.on('serviceDown', function(service) {
-        remoteSessions.splice(remoteSessions.indexOf(service));
-        this.emit('remoteSessionDown', {session: service});
-        this.emit('remoteSessionsChanged', {sessions: remoteSessions});
+        var index = remoteSessions.indexOf(service);
+        remoteSessions.splice(index);
+        this.emit('remoteSessionDown', sessionDetails(service, index));
     });
     browser.start();
 }
@@ -51,7 +54,7 @@ MdnsService.prototype.unpublish = function unpublish(session) {
 };
 
 MdnsService.prototype.getRemoteSessions = function getRemoteSessions() {
-    return remoteSessions;
+    return remoteSessions.map(sessionDetails);
 };
 
 module.exports = new MdnsService();

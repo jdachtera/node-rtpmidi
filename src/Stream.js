@@ -161,7 +161,7 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
     if (answer.count < 3) {
         this.session.sendMessage(this.rinfo2, answer);
     }
-    console.log("Synchronizing. Latency: " + this.latency);
+    process.stdout.write("Synchronizing. Latency: " + this.latency + "                            \r");
 };
 
 Stream.prototype.sendMessage = function sendMessage(message, callback) {

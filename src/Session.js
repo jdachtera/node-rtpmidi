@@ -71,7 +71,7 @@ Session.prototype.listening = function listening() {
 
 Session.prototype.handleMessage = function handleMessage(message, rinfo) {
 
-    this.log("Incoming AbstractMessage = ", message);
+    this.log("Incoming Message = ", message);
     var appleMidiMessage = new ControlMessage().parseBuffer(message),
         stream;
     if (appleMidiMessage.isValid) {
@@ -110,7 +110,7 @@ Session.prototype.sendMessage = function sendMessage(rinfo, message, callback) {
     if (message.isValid) {
 
         (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function () {
-            this.log("Outgoing AbstractMessage = ", message.buffer);
+            this.log("Outgoing Message = ", message.buffer);
             callback && callback();
         }.bind(this));
     } else {
