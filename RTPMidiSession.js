@@ -1,11 +1,11 @@
 "use strict";
 
-var util                = require("util"),
-    EventEmitter        = require("events").EventEmitter,
-    dgram               = require("dgram"),
-    ControlMessage      = require("./ControlMessage"),
-    RTPMidiMessage      = require("./RTPMidiMessage"),
-    RTPMidiStream       = require("./RTPMidiStream");
+var util = require("util"),
+    EventEmitter = require("events").EventEmitter,
+    dgram = require("dgram"),
+    ControlMessage = require("./ControlMessage"),
+    RTPMidiMessage = require("./RTPMidiMessage"),
+    RTPMidiStream = require("./RTPMidiStream");
 
 function RTPMidiSession(port, name) {
     EventEmitter.apply(this);
@@ -25,7 +25,7 @@ function RTPMidiSession(port, name) {
     this.streamConnected = this.streamConnected.bind(this)
     this.streamDisconnected = this.streamDisconnected.bind(this);
 
-    process.on( 'SIGINT', this.shutdown.bind(this));
+    process.on('SIGINT', this.shutdown.bind(this));
 }
 
 util.inherits(RTPMidiSession, EventEmitter);
@@ -34,7 +34,7 @@ RTPMidiSession.prototype.start = function start() {
     try {
         this.controlChannel.bind(this.port);
         this.messageChannel.bind(this.port + 1);
-    } catch(e) {
+    } catch (e) {
         this.emit('error', e);
     }
 };
@@ -42,7 +42,7 @@ RTPMidiSession.prototype.start = function start() {
 RTPMidiSession.prototype.now = (function () {
     if (process.hrtime) {
         var start = process.hrtime();
-        return function() {
+        return function () {
             var hrtime = process.hrtime(start);
             var now = Math.round((hrtime[0] * 10e9 + hrtime[1]) / 10e5);
             return now;
@@ -75,7 +75,7 @@ RTPMidiSession.prototype.handleMessage = function handleMessage(message, rinfo) 
     var appleMidiMessage = new ControlMessage().parseBuffer(message),
         stream;
     if (appleMidiMessage.isValid) {
-        stream = this.streams.filter(function(stream) {
+        stream = this.streams.filter(function (stream) {
             return stream.targetSSRC == appleMidiMessage.ssrc || stream.token == appleMidiMessage.token;
         }).pop();
         this.emit('controlMessage', appleMidiMessage);
@@ -90,7 +90,7 @@ RTPMidiSession.prototype.handleMessage = function handleMessage(message, rinfo) 
         }
     } else {
         var rtpMidiMessage = new RTPMidiMessage().parseBuffer(message);
-        stream = this.streams.filter(function(stream) {
+        stream = this.streams.filter(function (stream) {
             return stream.targetSSRC == rtpMidiMessage.ssrc;
         }).pop();
         if (stream) {
@@ -109,7 +109,7 @@ RTPMidiSession.prototype.sendMessage = function sendMessage(rinfo, message, call
 
     if (message.isValid) {
 
-        (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function() {
+        (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function () {
             this.log("Outgoing Message = ", message.buffer);
             callback && callback();
         }.bind(this));
@@ -136,7 +136,7 @@ RTPMidiSession.prototype.sendMidiMessage = function sendMidiMessage(ssrc, comman
 
 RTPMidiSession.prototype.shutdown = function shutdown() {
     this.log("Shutting down...");
-    this.streams.forEach(function(stream) {
+    this.streams.forEach(function (stream) {
         stream.end();
     });
     setTimeout(process.exit.bind(process), 100);
@@ -146,7 +146,7 @@ RTPMidiSession.prototype.connect = function connect(rinfo) {
     var stream = new RTPMidiStream(this);
     this.addStream(stream);
     var counter = 0;
-    var connectionInterval = setInterval(function() {
+    var connectionInterval = setInterval(function () {
         if (counter < 40 && stream.targetSSRC === null) {
             stream.sendInvitation(rinfo);
             counter++;
@@ -182,13 +182,13 @@ RTPMidiSession.prototype.removeStream = function removeStream(stream) {
 };
 
 RTPMidiSession.prototype.getStreams = function getStreams() {
-    return this.streams.filter(function(item) {
+    return this.streams.filter(function (item) {
         return item.isConnected;
     });
 };
 
 RTPMidiSession.prototype.getStream = function getStream(ssrc) {
-    for (var i=0; i < this.streams.length; i++) {
+    for (var i = 0; i < this.streams.length; i++) {
         if (this.streams[i].targetSSRC === ssrc) {
             return this.streams[i];
         }

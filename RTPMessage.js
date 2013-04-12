@@ -1,7 +1,7 @@
 "use strict";
 
-var util            = require("util"),
-    Message         = require("./Message");
+var util = require("util"),
+    Message = require("./Message");
 
 /**
  * This represents RTP Protocol message.
@@ -87,12 +87,12 @@ RTPMessage.prototype.generateBuffer = function generateBuffer() {
 
     var secondByte = this.payloadType | (this.marker ? 0x80 : 0);
 
-    buffer.writeUInt8(firstByte				, 0);
-    buffer.writeUInt8(secondByte    		, 1);
+    buffer.writeUInt8(firstByte, 0);
+    buffer.writeUInt8(secondByte, 1);
     buffer.writeUInt16BE(this.sequenceNumber, 2);
-    buffer.writeUInt32BE(this.timestamp	<< 0, 4);
+    buffer.writeUInt32BE(this.timestamp << 0, 4);
 
-    buffer.writeUInt32BE(this.ssrc			, 8);
+    buffer.writeUInt32BE(this.ssrc, 8);
 
     for (var i = 0; i < this.csrcs && i < 15; i++) {
         buffer.writeUInt32BE(this.csrcs[i], 12 + (4 * i));

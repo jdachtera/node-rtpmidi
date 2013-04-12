@@ -1,7 +1,7 @@
 "use strict";
 
-var util            = require("util"),
-    Message         = require("./Message"),
+var util = require("util"),
+    Message = require("./Message"),
     commands = {
         invitation: 0x494E,
         invitation_rejected: 0x4E4F,
@@ -10,10 +10,10 @@ var util            = require("util"),
         synchronization: 0x434B,
         receiver_feedback: 0x5253,
         bitrate_receive_limit: 0x524C
-	},
-	flags = {
-		start: 0xFFFF
-	};
+    },
+    flags = {
+        start: 0xFFFF
+    };
 
 function ControlMessage(buffer) {
     Message.apply(this);
@@ -40,7 +40,7 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
                 this.command = command;
             }
         }
-        switch(this.command) {
+        switch (this.command) {
             case 'invitation':
             case 'invitation_accepted':
             case 'invitation_rejected':
@@ -64,37 +64,37 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 
 ControlMessage.prototype.generateBuffer = function generateBuffer() {
     var buffer;
-    switch(this.command) {
+    switch (this.command) {
         case 'invitation':
         case 'invitation_accepted':
         case 'invitation_rejected':
         case 'end':
             buffer = new Buffer(17 + Buffer.byteLength(this.name, 'utf8'));
-            buffer.writeUInt16BE(	this.start				, 0);
-            buffer.writeUInt16BE(	commands[this.command]	, 2);
-            buffer.writeUInt32BE(	this.version 			, 4);
-            buffer.writeUInt32BE(	this.token				, 8);
-            buffer.writeUInt32BE(	this.ssrc				, 12);
-            buffer.write(			this.name				, 16);
+            buffer.writeUInt16BE(this.start, 0);
+            buffer.writeUInt16BE(commands[this.command], 2);
+            buffer.writeUInt32BE(this.version, 4);
+            buffer.writeUInt32BE(this.token, 8);
+            buffer.writeUInt32BE(this.ssrc, 12);
+            buffer.write(this.name, 16);
             if (this.command !== 'end') {
-                buffer.writeUInt8(	0						, buffer.length - 1);
+                buffer.writeUInt8(0, buffer.length - 1);
             }
             break;
         case 'synchronization':
             buffer = new Buffer(36);
-            buffer.writeUInt16BE(	this.start				, 0);
-            buffer.writeUInt16BE(	commands[this.command]	, 2);
-            buffer.writeUInt32BE(	this.ssrc				, 4);
-            buffer.writeUInt8(		this.count				, 8);
-            buffer.writeUInt8(		this.padding >>> 0xF0	, 9);
-            buffer.writeUInt16BE(	this.padding & 0x00FFFF	, 10);
+            buffer.writeUInt16BE(this.start, 0);
+            buffer.writeUInt16BE(commands[this.command], 2);
+            buffer.writeUInt32BE(this.ssrc, 4);
+            buffer.writeUInt8(this.count, 8);
+            buffer.writeUInt8(this.padding >>> 0xF0, 9);
+            buffer.writeUInt16BE(this.padding & 0x00FFFF, 10);
 
-            buffer.writeUInt32BE(   this.timestamp1[0]	    , 12);
-            buffer.writeUInt32BE(   this.timestamp1[1]	    , 16);
-            buffer.writeUInt32BE(   this.timestamp2[0]		, 20);
-            buffer.writeUInt32BE(   this.timestamp2[1]		, 24);
-            buffer.writeUInt32BE(   this.timestamp3[0]	    , 28);
-            buffer.writeUInt32BE(   this.timestamp3[1]	    , 32);
+            buffer.writeUInt32BE(this.timestamp1[0], 12);
+            buffer.writeUInt32BE(this.timestamp1[1], 16);
+            buffer.writeUInt32BE(this.timestamp2[0], 20);
+            buffer.writeUInt32BE(this.timestamp2[1], 24);
+            buffer.writeUInt32BE(this.timestamp3[0], 28);
+            buffer.writeUInt32BE(this.timestamp3[1], 32);
             break;
     }
     this.buffer = buffer;

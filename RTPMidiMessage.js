@@ -1,7 +1,7 @@
 "use strict";
 
-var util            = require("util"),
-    RTPMessage      = require("./RTPMessage"),
+var util = require("util"),
+    RTPMessage = require("./RTPMessage"),
     types_data_length = {
         0xe0: 2, 0xd0: 1, 0xc0: 1, 0xb0: 2, 0xa0: 2, 0x90: 2, 0x80: 2
     },
@@ -36,10 +36,10 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         var payload = this.payload;
         var firstByte = payload.readUInt8(0);
 
-        this.bigLength =            !!(firstByte & flags.bigLength);
-        this.hasJournal =           !!(firstByte & flags.hasJournal);
-        this.firstHasDeltaTime =    !!(firstByte & flags.firstHasDeltaTime);
-        this.p =                    !!(firstByte & flags.p);
+        this.bigLength = !!(firstByte & flags.bigLength);
+        this.hasJournal = !!(firstByte & flags.hasJournal);
+        this.firstHasDeltaTime = !!(firstByte & flags.firstHasDeltaTime);
+        this.p = !!(firstByte & flags.p);
 
         this.length = (firstByte & flags.maskLengthInFirstByte);
 
@@ -52,7 +52,7 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         var offset = commandStartOffset;
         var lastStatusByte = null;
 
-        while (offset < this.length + commandStartOffset -1) {
+        while (offset < this.length + commandStartOffset - 1) {
             var command = {deltaTime: 0};
             // Decode the delta time
             if (this.commands.length || this.firstHasDeltaTime) {
@@ -69,10 +69,10 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 
             var statusByte = payload.readUInt8(offset);
             var hasOwnStatusByte = (statusByte & 0x80) == 0x80;
-            if(hasOwnStatusByte) {
+            if (hasOwnStatusByte) {
                 lastStatusByte = statusByte;
                 offset++;
-            } else if (lastStatusByte)  {
+            } else if (lastStatusByte) {
                 statusByte = lastStatusByte;
             }
             var data_length = types_data_length[statusByte & 0xf0] || 0;

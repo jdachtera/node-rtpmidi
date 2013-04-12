@@ -1,12 +1,12 @@
 "use strict";
 
-var util                = require("util"),
-    EventEmitter        = require('events').EventEmitter,
-    ControlMessage      = require("./ControlMessage.js"),
-    RTPMidiMessage      = require("./RTPMidiMessage.js");
+var util = require("util"),
+    EventEmitter = require('events').EventEmitter,
+    ControlMessage = require("./ControlMessage.js"),
+    RTPMidiMessage = require("./RTPMidiMessage.js");
 
 // Helper functions
-function generateRandomInteger (octets) {
+function generateRandomInteger(octets) {
     return Math.round(Math.random() * Math.pow(2, 8 * octets));
 }
 
@@ -30,7 +30,7 @@ util.inherits(RTPMidiStream, EventEmitter);
 RTPMidiStream.prototype.handleControlMessage = function handleControlMessage(message, rinfo) {
     var commandName = message.command;
     var handlerName = 'handle';
-    handlerName += commandName.slice(0,1).toUpperCase();
+    handlerName += commandName.slice(0, 1).toUpperCase();
     handlerName += commandName.slice(1);
     if (this[handlerName]) {
         this[handlerName](message, rinfo);
@@ -43,7 +43,7 @@ RTPMidiStream.prototype.handleMidiMessage = function handleMidiMessage(message) 
 };
 
 RTPMidiStream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
-    if (this.rinfo1 === null ) {
+    if (this.rinfo1 === null) {
         console.log("Invitation Accepted by " + message.name);
         this.name = message.name;
         this.targetSSRC = message.ssrc;
@@ -55,12 +55,12 @@ RTPMidiStream.prototype.handleInvitation_accepted = function handleInvitation_ac
         console.log("Data channel to " + this.name + " established");
         this.rinfo2 = rinfo;
         var count = 0;
-        this.syncInterval = setInterval(function() {
+        this.syncInterval = setInterval(function () {
             this.sendSynchronization();
             count++;
             if (count > 10) {
                 clearInterval(this.syncInterval);
-                this.syncInterval = setInterval(function() {
+                this.syncInterval = setInterval(function () {
                     this.sendSynchronization();
                 }.bind(this), 10000)
             }
@@ -69,7 +69,7 @@ RTPMidiStream.prototype.handleInvitation_accepted = function handleInvitation_ac
 };
 
 RTPMidiStream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
-    if (this.rinfo1 ===null) {
+    if (this.rinfo1 === null) {
         this.rinfo1 = rinfo;
         this.token = message.token;
         this.name = message.name;
@@ -139,7 +139,7 @@ RTPMidiStream.prototype.sendSynchronization = function sendSynchronization(incom
     answer.ssrc = this.sourceSSRC;
     answer.token = this.token;
     var timestamp = this.session.now();
-    switch(answer.count) {
+    switch (answer.count) {
         case -1:
             answer.timestamp1[1] = timestamp;
             break;
@@ -166,7 +166,7 @@ RTPMidiStream.prototype.sendSynchronization = function sendSynchronization(incom
 
 RTPMidiStream.prototype.sendMessage = function sendMessage(message, callback) {
     var message = new RTPMidiMessage().copyFrom(message)
-    message .ssrc = this.sourceSSRC;
+    message.ssrc = this.sourceSSRC;
     message.sequenceNumber = this.lastSentSequenceNr = (this.lastSentSequenceNr + 1) % 0xf0000;
     message.timestamp = this.session.now();
     this.session.sendMessage(this.rinfo2, message, callback);

@@ -1,5 +1,6 @@
 // A Protocol message interface
-function Message() {}
+function Message() {
+}
 
 Message.prototype.copyFrom = function copyFrom(data) {
     for (var k in data) {

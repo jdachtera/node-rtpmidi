@@ -5,10 +5,10 @@ if (versionParts[0] === '0' && versionParts[1] === '4') {
 }
 
 module.exports = {
-    "Message":          require("./Message"),
-    "ControlMessage":   require("./ControlMessage"),
-    "RTPMessage":       require("./RTPMessage"),
-    "RTPMidiMessage":   require("./RTPMidiMessage"),
-    "RTPMidiStream":    require("./RTPMidiStream"),
-    "RTPMidiSession":   require("./RTPMidiSession")
+    "Message": require("./Message"),
+    "ControlMessage": require("./ControlMessage"),
+    "RTPMessage": require("./RTPMessage"),
+    "RTPMidiMessage": require("./RTPMidiMessage"),
+    "RTPMidiStream": require("./RTPMidiStream"),
+    "RTPMidiSession": require("./RTPMidiSession")
 };
