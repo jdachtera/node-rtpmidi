@@ -1,4 +1,4 @@
-var session = new (require("./index").RTPMidiSession)(5006, "RTPMidi Test Session");
+var session = new (require("./src/index").RTPMidiSession)(5006, "RTPMidi Test Session");
 
 var echo = false;
 
