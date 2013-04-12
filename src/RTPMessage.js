@@ -1,14 +1,14 @@
 "use strict";
 
-var util = require("util"),
-    Message = require("./Message");
+var util            = require("util"),
+    AbstractMessage = require("./AbstractMessage");
 
 /**
  * This represents RTP Protocol message.
  * @constructor
  */
 function RTPMessage() {
-    Message.apply(this);
+    AbstractMessage.apply(this);
     this.version = 2;
     this.padding = false;
     this.hasExtension = false;
@@ -21,11 +21,11 @@ function RTPMessage() {
     this.csrcs = [];
 }
 
-util.inherits(RTPMessage, Message);
+util.inherits(RTPMessage, AbstractMessage);
 
 /**
  * Parses a Buffer into this RTPMessage object
- * @param {Buffer} The buffer containing a RTP Message
+ * @param {Buffer} The buffer containing a RTP AbstractMessage
  * @returns {Buffer} self
  */
 RTPMessage.prototype.parseBuffer = function parseBuffer(buffer) {

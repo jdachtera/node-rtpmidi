@@ -1,16 +1,16 @@
 "use strict";
 
-var util = require("util"),
-    EventEmitter = require('events').EventEmitter,
-    ControlMessage = require("./ControlMessage.js"),
-    RTPMidiMessage = require("./RTPMidiMessage.js");
+var util            = require("util"),
+    EventEmitter    = require('events').EventEmitter,
+    ControlMessage  = require("./ControlMessage.js"),
+    MidiMessage  = require("./MidiMessage.js");
 
 // Helper functions
 function generateRandomInteger(octets) {
     return Math.round(Math.random() * Math.pow(2, 8 * octets));
 }
 
-function RTPMidiStream(session) {
+function Stream(session) {
     EventEmitter.apply(this);
     this.session = session;
     this.token = null;
@@ -25,9 +25,9 @@ function RTPMidiStream(session) {
     this.isConnected = false;
 }
 
-util.inherits(RTPMidiStream, EventEmitter);
+util.inherits(Stream, EventEmitter);
 
-RTPMidiStream.prototype.handleControlMessage = function handleControlMessage(message, rinfo) {
+Stream.prototype.handleControlMessage = function handleControlMessage(message, rinfo) {
     var commandName = message.command;
     var handlerName = 'handle';
     handlerName += commandName.slice(0, 1).toUpperCase();
@@ -38,11 +38,11 @@ RTPMidiStream.prototype.handleControlMessage = function handleControlMessage(mes
     this.emit('control-message', message);
 };
 
-RTPMidiStream.prototype.handleMidiMessage = function handleMidiMessage(message) {
+Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
     this.emit('message', {message: message});
 };
 
-RTPMidiStream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
+Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
     if (this.rinfo1 === null) {
         console.log("Invitation Accepted by " + message.name);
         this.name = message.name;
@@ -68,7 +68,7 @@ RTPMidiStream.prototype.handleInvitation_accepted = function handleInvitation_ac
     }
 };
 
-RTPMidiStream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
+Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
     if (this.rinfo1 === null) {
         this.rinfo1 = rinfo;
         this.token = message.token;
@@ -84,18 +84,18 @@ RTPMidiStream.prototype.handleInvitation = function handleInvitation(message, ri
     this.sendInvitationAccepted(rinfo);
 };
 
-RTPMidiStream.prototype.handleSynchronization = function handleSynchronization(message, rinfo) {
+Stream.prototype.handleSynchronization = function handleSynchronization(message, rinfo) {
     this.sendSynchronization(message);
 };
 
-RTPMidiStream.prototype.handleEndstream = function handleEndstream() {
+Stream.prototype.handleEndstream = function handleEndstream() {
     console.log(this.name + " ended the stream");
     clearInterval(this.syncInterval);
     this.isConnected = false;
     this.emit('disconnected', {stream: this});
 };
 
-RTPMidiStream.prototype.sendInvitation = function sendInvitation(rinfo) {
+Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
     if (!this.token) {
         this.token = generateRandomInteger(4);
     }
@@ -107,7 +107,7 @@ RTPMidiStream.prototype.sendInvitation = function sendInvitation(rinfo) {
     }));
 };
 
-RTPMidiStream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo) {
+Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo) {
     this.session.sendMessage(rinfo, new ControlMessage().copyFrom({
         command: 'invitation_accepted',
         token: this.token,
@@ -116,7 +116,7 @@ RTPMidiStream.prototype.sendInvitationAccepted = function sendInvitationAccepted
     }));
 };
 
-RTPMidiStream.prototype.sendEndstream = function sendEndstream() {
+Stream.prototype.sendEndstream = function sendEndstream() {
     this.session.sendMessage(this.rinfo1, new ControlMessage().copyFrom({
         command: 'end',
         token: this.token,
@@ -125,7 +125,7 @@ RTPMidiStream.prototype.sendEndstream = function sendEndstream() {
     }));
 };
 
-RTPMidiStream.prototype.sendSynchronization = function sendSynchronization(incomingSyncMessage) {
+Stream.prototype.sendSynchronization = function sendSynchronization(incomingSyncMessage) {
     incomingSyncMessage = incomingSyncMessage || {count: -1};
     var answer = new ControlMessage()
         .copyFrom({
@@ -164,15 +164,15 @@ RTPMidiStream.prototype.sendSynchronization = function sendSynchronization(incom
     console.log("Synchronizing. Latency: " + this.latency);
 };
 
-RTPMidiStream.prototype.sendMessage = function sendMessage(message, callback) {
-    var message = new RTPMidiMessage().copyFrom(message)
+Stream.prototype.sendMessage = function sendMessage(message, callback) {
+    var message = new MidiMessage().copyFrom(message)
     message.ssrc = this.sourceSSRC;
     message.sequenceNumber = this.lastSentSequenceNr = (this.lastSentSequenceNr + 1) % 0xf0000;
     message.timestamp = this.session.now();
     this.session.sendMessage(this.rinfo2, message, callback);
 };
 
-RTPMidiStream.prototype.end = function end() {
+Stream.prototype.end = function end() {
     if (this.isConnected) {
         this.sendEndstream();
     }
@@ -181,4 +181,4 @@ RTPMidiStream.prototype.end = function end() {
     this.emit('disconnected', {stream: this});
 };
 
-module.exports = RTPMidiStream;
+module.exports = Stream;

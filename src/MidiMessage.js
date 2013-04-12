@@ -17,7 +17,7 @@ var util = require("util"),
         p: 0x10
     };
 
-function RTPMidiMessage() {
+function MidiMEssage() {
     RTPMessage.apply(this);
     this.bigLength = false;
     this.hasJournal = false;
@@ -28,9 +28,9 @@ function RTPMidiMessage() {
     this.payloadType = 0x61;
 }
 
-util.inherits(RTPMidiMessage, RTPMessage);
+util.inherits(MidiMEssage, RTPMessage);
 
-RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
+MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
     RTPMessage.prototype.parseBuffer.apply(this, arguments);
     if (Buffer.isBuffer(buffer)) {
         var payload = this.payload;
@@ -93,7 +93,7 @@ RTPMidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     return this;
 };
 
-RTPMidiMessage.prototype.generateBuffer = function generateBuffer() {
+MidiMEssage.prototype.generateBuffer = function generateBuffer() {
     var payload = [],
         i,
         command,
@@ -155,4 +155,4 @@ RTPMidiMessage.prototype.generateBuffer = function generateBuffer() {
     return this;
 };
 
-module.exports = RTPMidiMessage;
+module.exports = MidiMEssage;

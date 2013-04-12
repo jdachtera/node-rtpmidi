@@ -1,4 +1,5 @@
-var session = new (require("./src/index").RTPMidiSession)(5006, "RTPMidi Test Session");
+var RTPMidi = require("./src/index"),
+    session = new RTPMidi.Session(5006, "RTPMidi Test Session");
 
 var echo = false;
 
@@ -44,7 +45,7 @@ stdin.on('data', function (key) {
             session.connect({address: '127.0.0.1', port: 5004});
             break;
         case 'n':
-            console.log("Sending Message...");
+            console.log("Sending AbstractMessage...");
             session.sendMidiMessage(null, [
                 {deltaTime: 0, data: [144, 60, 127]}
             ]);
@@ -57,6 +58,8 @@ stdin.on('data', function (key) {
             session.debug = !session.debug;
             console.log("Debug mode is " + (session.debug ? "on" : "off") + ".");
             break;
+        case 's':
+
         case '\u0003':
             session.shutdown();
             break;

@@ -1,7 +1,7 @@
 "use strict";
 
-var util = require("util"),
-    Message = require("./Message"),
+var util            = require("util"),
+    AbstractMessage = require("./AbstractMessage"),
     commands = {
         invitation: 0x494E,
         invitation_rejected: 0x4E4F,
@@ -16,12 +16,12 @@ var util = require("util"),
     };
 
 function ControlMessage(buffer) {
-    Message.apply(this);
+    AbstractMessage.apply(this);
     this.start = flags.start;
     this.version = 2;
 }
 
-util.inherits(ControlMessage, Message);
+util.inherits(ControlMessage, AbstractMessage);
 
 ControlMessage.prototype.name = '';
 ControlMessage.prototype.isValid = true;
