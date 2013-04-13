@@ -1,11 +1,11 @@
 "use strict";
 
-var util = require("util"),
-    EventEmitter = require("events").EventEmitter,
-    dgram = require("dgram"),
-    ControlMessage = require("./ControlMessage"),
-    MidiMessage = require("./MidiMessage"),
-    Stream = require("./Stream");
+var util			= require("util"),
+    EventEmitter	= require("events").EventEmitter,
+    dgram			= require("dgram"),
+    ControlMessage	= require("./ControlMessage"),
+    MidiMessage		= require("./MidiMessage"),
+    Stream			= require("./Stream");
 
 function Session(port, name) {
     EventEmitter.apply(this);
@@ -157,7 +157,6 @@ Session.prototype.connect = function connect(rinfo) {
             }
         }
     }, 1500);
-
 };
 
 Session.prototype.streamConnected = function streamConnected(event) {

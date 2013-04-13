@@ -8,8 +8,15 @@
         "type": "git",
         "url": "http://github.com/jdachtera/node-rtpmidi.git"
     },
+	"optionalDependencies": {
+		"mdns": "2.x"
+	},
     "keywords": [
-        "midi"
+        "midi",
+		"rtpmidi",
+		"coremidi",
+		"network",
+		"music"
     ],
     "license": "MIT",
     "engines": {
