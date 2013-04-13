@@ -1,6 +1,6 @@
 {
     "name": "rtpmidi",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
     "description": "A server for sending and receiving RTP Midi messages through the network",
     "main": "./src/index.js",
@@ -9,7 +9,7 @@
         "url": "http://github.com/jdachtera/node-rtpmidi.git"
     },
 	"optionalDependencies": {
-		"mdns": "2.x"
+		"mdns": "1.x"
 	},
     "keywords": [
         "midi",
