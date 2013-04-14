@@ -3,7 +3,13 @@
 var util = require("util"),
     RTPMessage = require("./RTPMessage"),
     types_data_length = {
-        0xe0: 2, 0xd0: 1, 0xc0: 1, 0xb0: 2, 0xa0: 2, 0x90: 2, 0x80: 2
+        0xe0: 2,
+        0xd0: 1,
+        0xc0: 1,
+        0xb0: 2,
+        0xa0: 2,
+        0x90: 2,
+        0x80: 2
     },
     flags = {
         systemMessage: 0xf0,
@@ -32,63 +38,63 @@ util.inherits(MidiMEssage, RTPMessage);
 
 MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
     RTPMessage.prototype.parseBuffer.apply(this, arguments);
-    if (Buffer.isBuffer(buffer)) {
-        var payload = this.payload;
-        var firstByte = payload.readUInt8(0);
+    var payload = this.payload;
+    var firstByte = payload.readUInt8(0);
 
-        this.bigLength = !!(firstByte & flags.bigLength);
-        this.hasJournal = !!(firstByte & flags.hasJournal);
-        this.firstHasDeltaTime = !!(firstByte & flags.firstHasDeltaTime);
-        this.p = !!(firstByte & flags.p);
+    this.bigLength = !! (firstByte & flags.bigLength);
+    this.hasJournal = !! (firstByte & flags.hasJournal);
+    this.firstHasDeltaTime = !! (firstByte & flags.firstHasDeltaTime);
+    this.p = !! (firstByte & flags.p);
 
-        this.length = (firstByte & flags.maskLengthInFirstByte);
+    this.length = (firstByte & flags.maskLengthInFirstByte);
 
-        if (this.bigLength) {
-            this.length = this.length << 8 + payload.readUInt8(1);
-        }
+    if (this.bigLength) {
+        this.length = this.length << 8 + payload.readUInt8(1);
+    }
 
-        // Read the command section
-        var commandStartOffset = this.bigLength ? 2 : 1;
-        var offset = commandStartOffset;
-        var lastStatusByte = null;
+    // Read the command section
+    var commandStartOffset = this.bigLength ? 2 : 1;
+    var offset = commandStartOffset;
+    var lastStatusByte = null;
 
-        while (offset < this.length + commandStartOffset - 1) {
-            var command = {deltaTime: 0};
-            // Decode the delta time
-            if (this.commands.length || this.firstHasDeltaTime) {
-                for (var k = 0; k < 3; k++) {
-                    var currentOctet = payload.readUInt8(offset);
-                    offset++;
-                    command.deltaTime <<= 7;
-                    command.deltaTime += currentOctet & flags.maskDeltaTimeByte;
-                    if (!(currentOctet & flags.deltaTimeHasNext)) {
-                        break;
-                    }
+    while (offset < this.length + commandStartOffset - 1) {
+        var command = {
+            deltaTime: 0
+        };
+        // Decode the delta time
+        if (this.commands.length || this.firstHasDeltaTime) {
+            for (var k = 0; k < 3; k++) {
+                var currentOctet = payload.readUInt8(offset);
+                offset++;
+                command.deltaTime <<= 7;
+                command.deltaTime += currentOctet & flags.maskDeltaTimeByte;
+                if (!(currentOctet & flags.deltaTimeHasNext)) {
+                    break;
                 }
             }
-
-            var statusByte = payload.readUInt8(offset);
-            var hasOwnStatusByte = (statusByte & 0x80) == 0x80;
-            if (hasOwnStatusByte) {
-                lastStatusByte = statusByte;
-                offset++;
-            } else if (lastStatusByte) {
-                statusByte = lastStatusByte;
-            }
-            var data_length = types_data_length[statusByte & 0xf0] || 0;
-            command.data = new Buffer(1 + data_length);
-            command.data[0] = statusByte;
-            if (payload.length < offset + data_length) {
-                this.isValid = false;
-                return;
-            }
-            if (data_length) {
-                payload.copy(command.data, 1, offset, offset + data_length);
-                offset += data_length;
-            }
-
-            this.commands.push(command);
         }
+
+        var statusByte = payload.readUInt8(offset);
+        var hasOwnStatusByte = (statusByte & 0x80) == 0x80;
+        if (hasOwnStatusByte) {
+            lastStatusByte = statusByte;
+            offset++;
+        } else if (lastStatusByte) {
+            statusByte = lastStatusByte;
+        }
+        var data_length = types_data_length[statusByte & 0xf0] || 0;
+        command.data = new Buffer(1 + data_length);
+        command.data[0] = statusByte;
+        if (payload.length < offset + data_length) {
+            this.isValid = false;
+            return;
+        }
+        if (data_length) {
+            payload.copy(command.data, 1, offset, offset + data_length);
+            offset += data_length;
+        }
+
+        this.commands.push(command);
     }
     return this;
 };

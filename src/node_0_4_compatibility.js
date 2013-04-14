@@ -21,11 +21,11 @@
 
 var assert = require('assert');
 
-process.stdin.setRawMode = function () {
+process.stdin.setRawMode = function() {
     require('tty').setRawMode(true);
 };
 
-Buffer.prototype.readUInt8 = function (offset, noAssert) {
+Buffer.prototype.readUInt8 = function(offset, noAssert) {
     var buffer = this;
 
     if (!noAssert) {
@@ -44,7 +44,7 @@ function readUInt16(buffer, offset, isBigEndian, noAssert) {
 
 
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -65,11 +65,11 @@ function readUInt16(buffer, offset, isBigEndian, noAssert) {
     return val;
 }
 
-Buffer.prototype.readUInt16LE = function (offset, noAssert) {
+Buffer.prototype.readUInt16LE = function(offset, noAssert) {
     return readUInt16(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readUInt16BE = function (offset, noAssert) {
+Buffer.prototype.readUInt16BE = function(offset, noAssert) {
     return readUInt16(this, offset, true, noAssert);
 };
 
@@ -77,7 +77,7 @@ function readUInt32(buffer, offset, isBigEndian, noAssert) {
     var val = 0;
 
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -102,11 +102,11 @@ function readUInt32(buffer, offset, isBigEndian, noAssert) {
     return val;
 }
 
-Buffer.prototype.readUInt32LE = function (offset, noAssert) {
+Buffer.prototype.readUInt32LE = function(offset, noAssert) {
     return readUInt32(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readUInt32BE = function (offset, noAssert) {
+Buffer.prototype.readUInt32BE = function(offset, noAssert) {
     return readUInt32(this, offset, true, noAssert);
 };
 
@@ -156,7 +156,7 @@ Buffer.prototype.readUInt32BE = function (offset, noAssert) {
  * (0x007f + 1) * -1
  * (0x0080) * -1
  */
-Buffer.prototype.readInt8 = function (offset, noAssert) {
+Buffer.prototype.readInt8 = function(offset, noAssert) {
     var buffer = this;
     var neg;
 
@@ -180,7 +180,7 @@ function readInt16(buffer, offset, isBigEndian, noAssert) {
     var neg, val;
 
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -199,11 +199,11 @@ function readInt16(buffer, offset, isBigEndian, noAssert) {
     return (0xffff - val + 1) * -1;
 }
 
-Buffer.prototype.readInt16LE = function (offset, noAssert) {
+Buffer.prototype.readInt16LE = function(offset, noAssert) {
     return readInt16(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readInt16BE = function (offset, noAssert) {
+Buffer.prototype.readInt16BE = function(offset, noAssert) {
     return readInt16(this, offset, true, noAssert);
 };
 
@@ -211,7 +211,7 @@ function readInt32(buffer, offset, isBigEndian, noAssert) {
     var neg, val;
 
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -230,17 +230,17 @@ function readInt32(buffer, offset, isBigEndian, noAssert) {
     return (0xffffffff - val + 1) * -1;
 }
 
-Buffer.prototype.readInt32LE = function (offset, noAssert) {
+Buffer.prototype.readInt32LE = function(offset, noAssert) {
     return readInt32(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readInt32BE = function (offset, noAssert) {
+Buffer.prototype.readInt32BE = function(offset, noAssert) {
     return readInt32(this, offset, true, noAssert);
 };
 
 function readFloat(buffer, offset, isBigEndian, noAssert) {
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset + 3 < buffer.length,
@@ -251,17 +251,17 @@ function readFloat(buffer, offset, isBigEndian, noAssert) {
         23, 4);
 }
 
-Buffer.prototype.readFloatLE = function (offset, noAssert) {
+Buffer.prototype.readFloatLE = function(offset, noAssert) {
     return readFloat(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readFloatBE = function (offset, noAssert) {
+Buffer.prototype.readFloatBE = function(offset, noAssert) {
     return readFloat(this, offset, true, noAssert);
 };
 
 function readDouble(buffer, offset, isBigEndian, noAssert) {
     if (!noAssert) {
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset + 7 < buffer.length,
@@ -272,11 +272,11 @@ function readDouble(buffer, offset, isBigEndian, noAssert) {
         52, 8);
 }
 
-Buffer.prototype.readDoubleLE = function (offset, noAssert) {
+Buffer.prototype.readDoubleLE = function(offset, noAssert) {
     return readDouble(this, offset, false, noAssert);
 };
 
-Buffer.prototype.readDoubleBE = function (offset, noAssert) {
+Buffer.prototype.readDoubleBE = function(offset, noAssert) {
     return readDouble(this, offset, true, noAssert);
 };
 
@@ -291,7 +291,7 @@ Buffer.prototype.readDoubleBE = function (offset, noAssert) {
  *      max             The maximum value
  */
 function verifuint(value, max) {
-    assert.ok(typeof (value) == 'number',
+    assert.ok(typeof(value) == 'number',
         'cannot write a non-number as a number');
 
     assert.ok(value >= 0,
@@ -302,7 +302,7 @@ function verifuint(value, max) {
     assert.ok(Math.floor(value) === value, 'value has a fractional component');
 }
 
-Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
+Buffer.prototype.writeUInt8 = function(value, offset, noAssert) {
     var buffer = this;
 
     if (!noAssert) {
@@ -326,7 +326,7 @@ function writeUInt16(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -347,11 +347,11 @@ function writeUInt16(buffer, value, offset, isBigEndian, noAssert) {
     }
 }
 
-Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
+Buffer.prototype.writeUInt16LE = function(value, offset, noAssert) {
     writeUInt16(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
+Buffer.prototype.writeUInt16BE = function(value, offset, noAssert) {
     writeUInt16(this, value, offset, true, noAssert);
 };
 
@@ -360,7 +360,7 @@ function writeUInt32(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -385,11 +385,11 @@ function writeUInt32(buffer, value, offset, isBigEndian, noAssert) {
     }
 }
 
-Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
+Buffer.prototype.writeUInt32LE = function(value, offset, noAssert) {
     writeUInt32(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
+Buffer.prototype.writeUInt32BE = function(value, offset, noAssert) {
     writeUInt32(this, value, offset, true, noAssert);
 };
 
@@ -435,7 +435,7 @@ Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
  * A series of checks to make sure we actually have a signed 32-bit number
  */
 function verifsint(value, max, min) {
-    assert.ok(typeof (value) == 'number',
+    assert.ok(typeof(value) == 'number',
         'cannot write a non-number as a number');
 
     assert.ok(value <= max, 'value larger than maximum allowed value');
@@ -446,7 +446,7 @@ function verifsint(value, max, min) {
 }
 
 function verifIEEE754(value, max, min) {
-    assert.ok(typeof (value) == 'number',
+    assert.ok(typeof(value) == 'number',
         'cannot write a non-number as a number');
 
     assert.ok(value <= max, 'value larger than maximum allowed value');
@@ -454,7 +454,7 @@ function verifIEEE754(value, max, min) {
     assert.ok(value >= min, 'value smaller than minimum allowed value');
 }
 
-Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
+Buffer.prototype.writeInt8 = function(value, offset, noAssert) {
     var buffer = this;
 
     if (!noAssert) {
@@ -482,7 +482,7 @@ function writeInt16(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -501,11 +501,11 @@ function writeInt16(buffer, value, offset, isBigEndian, noAssert) {
     }
 }
 
-Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt16LE = function(value, offset, noAssert) {
     writeInt16(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt16BE = function(value, offset, noAssert) {
     writeInt16(this, value, offset, true, noAssert);
 };
 
@@ -514,7 +514,7 @@ function writeInt32(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -533,11 +533,11 @@ function writeInt32(buffer, value, offset, isBigEndian, noAssert) {
     }
 }
 
-Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt32LE = function(value, offset, noAssert) {
     writeInt32(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
+Buffer.prototype.writeInt32BE = function(value, offset, noAssert) {
     writeInt32(this, value, offset, true, noAssert);
 };
 
@@ -546,7 +546,7 @@ function writeFloat(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -562,11 +562,11 @@ function writeFloat(buffer, value, offset, isBigEndian, noAssert) {
         23, 4);
 }
 
-Buffer.prototype.writeFloatLE = function (value, offset, noAssert) {
+Buffer.prototype.writeFloatLE = function(value, offset, noAssert) {
     writeFloat(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
+Buffer.prototype.writeFloatBE = function(value, offset, noAssert) {
     writeFloat(this, value, offset, true, noAssert);
 };
 
@@ -575,7 +575,7 @@ function writeDouble(buffer, value, offset, isBigEndian, noAssert) {
         assert.ok(value !== undefined && value !== null,
             'missing value');
 
-        assert.ok(typeof (isBigEndian) === 'boolean',
+        assert.ok(typeof(isBigEndian) === 'boolean',
             'missing or invalid endian');
 
         assert.ok(offset !== undefined && offset !== null,
@@ -591,10 +591,10 @@ function writeDouble(buffer, value, offset, isBigEndian, noAssert) {
         52, 8);
 }
 
-Buffer.prototype.writeDoubleLE = function (value, offset, noAssert) {
+Buffer.prototype.writeDoubleLE = function(value, offset, noAssert) {
     writeDouble(this, value, offset, false, noAssert);
 };
 
-Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
+Buffer.prototype.writeDoubleBE = function(value, offset, noAssert) {
     writeDouble(this, value, offset, true, noAssert);
 };

@@ -1,11 +1,12 @@
 "use strict";
 
-var util            = require("util"),
-    EventEmitter    = require('events').EventEmitter,
-    ControlMessage  = require("./ControlMessage.js"),
-    MidiMessage  = require("./MidiMessage.js");
+var util = require("util"),
+    EventEmitter = require('events').EventEmitter,
+    ControlMessage = require("./ControlMessage.js"),
+    MidiMessage = require("./MidiMessage.js");
 
 // Helper functions
+
 function generateRandomInteger(octets) {
     return Math.round(Math.random() * Math.pow(2, 8 * octets));
 }
@@ -39,7 +40,9 @@ Stream.prototype.handleControlMessage = function handleControlMessage(message, r
 };
 
 Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
-    this.emit('message', {message: message});
+    this.emit('message', {
+        message: message
+    });
 };
 
 Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
@@ -48,19 +51,24 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
         this.name = message.name;
         this.targetSSRC = message.ssrc;
         this.rinfo1 = rinfo;
-        this.sendInvitation({address: rinfo.address, port: rinfo.port + 1});
+        this.sendInvitation({
+            address: rinfo.address,
+            port: rinfo.port + 1
+        });
         this.isConnected = true;
-        this.emit('connected', {stream: this});
+        this.emit('connected', {
+            stream: this
+        });
     } else if (this.rinfo2 === null) {
         console.log("Data channel to " + this.name + " established");
         this.rinfo2 = rinfo;
         var count = 0;
-        this.syncInterval = setInterval(function () {
+        this.syncInterval = setInterval(function() {
             this.sendSynchronization();
             count++;
             if (count > 10) {
                 clearInterval(this.syncInterval);
-                this.syncInterval = setInterval(function () {
+                this.syncInterval = setInterval(function() {
                     this.sendSynchronization();
                 }.bind(this), 10000)
             }
@@ -79,7 +87,9 @@ Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
         this.rinfo2 = rinfo;
         console.log("Got an invitation from " + message.name + " on channel 2");
         this.isConnected = true;
-        this.emit('connected', {stream: this});
+        this.emit('connected', {
+            stream: this
+        });
     }
     this.sendInvitationAccepted(rinfo);
 };
@@ -92,14 +102,16 @@ Stream.prototype.handleEndstream = function handleEndstream() {
     console.log(this.name + " ended the stream");
     clearInterval(this.syncInterval);
     this.isConnected = false;
-    this.emit('disconnected', {stream: this});
+    this.emit('disconnected', {
+        stream: this
+    });
 };
 
 Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
     if (!this.token) {
         this.token = generateRandomInteger(4);
     }
-    this.session.sendMessage(rinfo, new ControlMessage().copyFrom({
+    this.session.sendMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation',
         token: this.token,
         ssrc: this.sourceSSRC,
@@ -108,7 +120,7 @@ Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
 };
 
 Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo) {
-    this.session.sendMessage(rinfo, new ControlMessage().copyFrom({
+    this.session.sendMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation_accepted',
         token: this.token,
         ssrc: this.sourceSSRC,
@@ -117,7 +129,7 @@ Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo)
 };
 
 Stream.prototype.sendEndstream = function sendEndstream() {
-    this.session.sendMessage(this.rinfo1, new ControlMessage().copyFrom({
+    this.session.sendMessage(this.rinfo1, new ControlMessage().mixin({
         command: 'end',
         token: this.token,
         ssrc: this.sourceSSRC,
@@ -126,16 +138,18 @@ Stream.prototype.sendEndstream = function sendEndstream() {
 };
 
 Stream.prototype.sendSynchronization = function sendSynchronization(incomingSyncMessage) {
-    incomingSyncMessage = incomingSyncMessage || {count: -1};
+    incomingSyncMessage = incomingSyncMessage || {
+        count: -1
+    };
     var answer = new ControlMessage()
-        .copyFrom({
-            command: 'synchronization',
-            timestamp1: [0x00000000, 0],
-            timestamp2: [0x00000000, 0],
-            timestamp3: [0x00000000, 0],
-            count: -1
-        })
-        .copyFrom(incomingSyncMessage);
+        .mixin({
+        command: 'synchronization',
+        timestamp1: [0x00000000, 0],
+        timestamp2: [0x00000000, 0],
+        timestamp3: [0x00000000, 0],
+        count: -1
+    })
+        .mixin(incomingSyncMessage);
     answer.ssrc = this.sourceSSRC;
     answer.token = this.token;
     var timestamp = this.session.now();
@@ -165,7 +179,7 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
 };
 
 Stream.prototype.sendMessage = function sendMessage(message, callback) {
-    var message = new MidiMessage().copyFrom(message)
+    var message = new MidiMessage().mixin(message)
     message.ssrc = this.sourceSSRC;
     message.sequenceNumber = this.lastSentSequenceNr = (this.lastSentSequenceNr + 1) % 0xf0000;
     message.timestamp = this.session.now();
@@ -178,7 +192,9 @@ Stream.prototype.end = function end() {
     }
     clearInterval(this.syncInterval);
     this.isConnected = false;
-    this.emit('disconnected', {stream: this});
+    this.emit('disconnected', {
+        stream: this
+    });
 };
 
 module.exports = Stream;

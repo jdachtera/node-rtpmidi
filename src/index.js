@@ -7,11 +7,11 @@ if (versionParts[0] === '0' && versionParts[1] === '4') {
 }
 
 module.exports = {
-    "Message":          require("./AbstractMessage"),
-    "ControlMessage":   require("./ControlMessage"),
-    "RTPMessage":       require("./RTPMessage"),
-    "MidiMessage":      require("./MidiMessage"),
-    "Stream":           require("./Stream"),
-    "Session":          require("./Session"),
-    "MdnsService":      require("./MdnsService")
+    "Message": require("./AbstractMessage"),
+    "ControlMessage": require("./ControlMessage"),
+    "RTPMessage": require("./RTPMessage"),
+    "MidiMessage": require("./MidiMessage"),
+    "Stream": require("./Stream"),
+    "Session": require("./Session"),
+    "MdnsService": require("./MdnsService")
 };
