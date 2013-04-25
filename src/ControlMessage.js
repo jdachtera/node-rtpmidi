@@ -1,7 +1,7 @@
 "use strict";
 
 var util = require("util"),
-	assert = require('assert'),
+    assert = require('assert'),
     AbstractMessage = require("./AbstractMessage"),
     byteToCommand = {
         0x494E: 'invitation',
@@ -12,21 +12,21 @@ var util = require("util"),
         0x5253: 'receiver_feedback',
         0x524C: 'bitrate_receive_limit'
     },
-	commandToByte = (function() {
-		var obj = {};
-		for (var key in byteToCommand) {
-			if (byteToCommand.hasOwnProperty(key)) {
-				obj[byteToCommand[key]] = key;
-			}
-		}
-		return obj;
-	})(),
+    commandToByte = (function () {
+        var obj = {};
+        for (var key in byteToCommand) {
+            if (byteToCommand.hasOwnProperty(key)) {
+                obj[byteToCommand[key]] = parseInt(key, 10);
+            }
+        }
+        return obj;
+    })(),
     flags = {
         start: 0xFFFF
     };
 
 function ControlMessage(buffer) {
-    AbstractMessage.apply(this); 
+    AbstractMessage.apply(this);
 }
 
 util.inherits(ControlMessage, AbstractMessage);
@@ -39,9 +39,12 @@ ControlMessage.prototype.version = 2;
 ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     AbstractMessage.prototype.parseBuffer.apply(this, arguments);
     this.start = buffer.readUInt16BE(0);
-	assert(this.start === flags.start, 'No valid control message');
+    if (this.start !== flags.start) {
+        this.isValid = false;
+        return this;
+    }
     this.command = byteToCommand[buffer.readUInt16BE(2)];
-	assert(!!this.command, 'Not a valid command');
+    assert.ok(!!this.command, 'Not a valid command');
     switch (this.command) {
         case 'invitation':
         case 'invitation_accepted':
@@ -64,15 +67,17 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 };
 
 ControlMessage.prototype.generateBuffer = function generateBuffer() {
-    var buffer;
+    var buffer,
+        commandByte = commandToByte[this.command];
     switch (this.command) {
         case 'invitation':
         case 'invitation_accepted':
         case 'invitation_rejected':
         case 'end':
+            this.name = this.name || '';
             buffer = new Buffer(17 + Buffer.byteLength(this.name, 'utf8'));
             buffer.writeUInt16BE(this.start, 0);
-            buffer.writeUInt16BE(commandToByte[this.command], 2);
+            buffer.writeUInt16BE(commandByte, 2);
             buffer.writeUInt32BE(this.version, 4);
             buffer.writeUInt32BE(this.token, 8);
             buffer.writeUInt32BE(this.ssrc, 12);
@@ -84,12 +89,11 @@ ControlMessage.prototype.generateBuffer = function generateBuffer() {
         case 'synchronization':
             buffer = new Buffer(36);
             buffer.writeUInt16BE(this.start, 0);
-            buffer.writeUInt16BE(commandToByte[this.command], 2);
+            buffer.writeUInt16BE(commandByte, 2);
             buffer.writeUInt32BE(this.ssrc, 4);
             buffer.writeUInt8(this.count, 8);
             buffer.writeUInt8(this.padding >>> 0xF0, 9);
             buffer.writeUInt16BE(this.padding & 0x00FFFF, 10);
-
             buffer.writeUInt32BE(this.timestamp1[0], 12);
             buffer.writeUInt32BE(this.timestamp1[1], 16);
             buffer.writeUInt32BE(this.timestamp2[0], 20);
@@ -97,9 +101,9 @@ ControlMessage.prototype.generateBuffer = function generateBuffer() {
             buffer.writeUInt32BE(this.timestamp3[0], 28);
             buffer.writeUInt32BE(this.timestamp3[1], 32);
             break;
-		default:
-			assert.fail('Not a valid command: "' + this.command + '"');
-			break;
+        default:
+            assert.fail('Not a valid command: "' + this.command + '"');
+            break;
     }
     this.buffer = buffer;
     return this;

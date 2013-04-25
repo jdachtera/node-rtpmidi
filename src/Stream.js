@@ -63,12 +63,12 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
         console.log("Data channel to " + this.name + " established");
         this.rinfo2 = rinfo;
         var count = 0;
-        this.syncInterval = setInterval(function() {
+        this.syncInterval = setInterval(function () {
             this.sendSynchronization();
             count++;
             if (count > 10) {
                 clearInterval(this.syncInterval);
-                this.syncInterval = setInterval(function() {
+                this.syncInterval = setInterval(function () {
                     this.sendSynchronization();
                 }.bind(this), 10000)
             }
@@ -143,12 +143,12 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
     };
     var answer = new ControlMessage()
         .mixin({
-        command: 'synchronization',
-        timestamp1: [0x00000000, 0],
-        timestamp2: [0x00000000, 0],
-        timestamp3: [0x00000000, 0],
-        count: -1
-    })
+            command: 'synchronization',
+            timestamp1: [0x00000000, 0],
+            timestamp2: [0x00000000, 0],
+            timestamp3: [0x00000000, 0],
+            count: -1
+        })
         .mixin(incomingSyncMessage);
     answer.ssrc = this.sourceSSRC;
     answer.token = this.token;
@@ -195,6 +195,14 @@ Stream.prototype.end = function end() {
     this.emit('disconnected', {
         stream: this
     });
+};
+
+Stream.prototype.getJsonConfiguration = function() {
+    return {
+        address: this.rinfo1.address,
+        port: this.rinfo1.port,
+        name: this.name
+    };
 };
 
 module.exports = Stream;

@@ -23,7 +23,7 @@ var util = require("util"),
         p: 0x10
     };
 
-function MidiMEssage() {
+function MidiMessage() {
     RTPMessage.apply(this);
     this.bigLength = false;
     this.hasJournal = false;
@@ -34,17 +34,23 @@ function MidiMEssage() {
     this.payloadType = 0x61;
 }
 
-util.inherits(MidiMEssage, RTPMessage);
+util.inherits(MidiMessage, RTPMessage);
 
-MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
+MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     RTPMessage.prototype.parseBuffer.apply(this, arguments);
-    var payload = this.payload;
-    var firstByte = payload.readUInt8(0);
+    var payload = this.payload,
+        firstByte = payload.readUInt8(0),
+        commandStartOffset,
+        offset,
+        statusByte,
+        lastStatusByte = null,
+        hasOwnStatusByte,
+        data_length;
 
-    this.bigLength = !! (firstByte & flags.bigLength);
-    this.hasJournal = !! (firstByte & flags.hasJournal);
-    this.firstHasDeltaTime = !! (firstByte & flags.firstHasDeltaTime);
-    this.p = !! (firstByte & flags.p);
+    this.bigLength = !!(firstByte & flags.bigLength);
+    this.hasJournal = !!(firstByte & flags.hasJournal);
+    this.firstHasDeltaTime = !!(firstByte & flags.firstHasDeltaTime);
+    this.p = !!(firstByte & flags.p);
 
     this.length = (firstByte & flags.maskLengthInFirstByte);
 
@@ -53,9 +59,8 @@ MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
     }
 
     // Read the command section
-    var commandStartOffset = this.bigLength ? 2 : 1;
-    var offset = commandStartOffset;
-    var lastStatusByte = null;
+    commandStartOffset = this.bigLength ? 2 : 1;
+    offset = commandStartOffset;
 
     while (offset < this.length + commandStartOffset - 1) {
         var command = {
@@ -74,15 +79,22 @@ MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
             }
         }
 
-        var statusByte = payload.readUInt8(offset);
-        var hasOwnStatusByte = (statusByte & 0x80) == 0x80;
+        statusByte = payload.readUInt8(offset);
+        hasOwnStatusByte = (statusByte & 0x80) == 0x80;
         if (hasOwnStatusByte) {
             lastStatusByte = statusByte;
             offset++;
         } else if (lastStatusByte) {
             statusByte = lastStatusByte;
         }
-        var data_length = types_data_length[statusByte & 0xf0] || 0;
+        if (statusByte === 0xf0) {
+            data_length = 1;
+            while (payload.length > offset + data_length && payload.readUInt8(offset + data_length) !== 0xf7) {
+                data_length++;
+            }
+        } else {
+            data_length = types_data_length[statusByte & 0xf0];
+        }
         command.data = new Buffer(1 + data_length);
         command.data[0] = statusByte;
         if (payload.length < offset + data_length) {
@@ -99,7 +111,7 @@ MidiMEssage.prototype.parseBuffer = function parseBuffer(buffer) {
     return this;
 };
 
-MidiMEssage.prototype.generateBuffer = function generateBuffer() {
+MidiMessage.prototype.generateBuffer = function generateBuffer() {
     var payload = [],
         i,
         command,
@@ -161,4 +173,4 @@ MidiMEssage.prototype.generateBuffer = function generateBuffer() {
     return this;
 };
 
-module.exports = MidiMEssage;
+module.exports = MidiMessage;

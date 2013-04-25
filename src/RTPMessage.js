@@ -1,7 +1,7 @@
 "use strict";
 
 var util = require("util"),
-	assert = require('assert'),
+    assert = require('assert'),
     AbstractMessage = require("./AbstractMessage");
 
 /**
@@ -37,13 +37,13 @@ RTPMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         secondByte,
         currentOffset,
         i;
-  
+
     AbstractMessage.prototype.parseBuffer.apply(this, arguments);
     firstByte = buffer.readUInt8(0);
 
     this.version = firstByte >>> 6;
-    this.padding = !! (firstByte >>> 5 & 1);
-    this.hasExtension = !! (firstByte >>> 4 & 1);
+    this.padding = !!(firstByte >>> 5 & 1);
+    this.hasExtension = !!(firstByte >>> 4 & 1);
     this.csrcCount = firstByte & 0xF;
 
     secondByte = buffer.readUInt8(1);
