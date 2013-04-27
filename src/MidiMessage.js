@@ -173,4 +173,15 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
     return this;
 };
 
+MidiMessage.prototype.toJSON = function() {
+    return {
+        commands: this.commands.map(function(command) {
+            return {
+                deltaTime: command.deltaTime,
+                data: Array.prototype.slice.apply(command.data)
+            };
+        })
+    };
+};
+
 module.exports = MidiMessage;

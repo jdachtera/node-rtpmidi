@@ -40,9 +40,7 @@ Stream.prototype.handleControlMessage = function handleControlMessage(message, r
 };
 
 Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
-    this.emit('message', {
-        message: message
-    });
+    this.emit('message', message);
 };
 
 Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
@@ -197,7 +195,7 @@ Stream.prototype.end = function end() {
     });
 };
 
-Stream.prototype.getJsonConfiguration = function() {
+Stream.prototype.toJSON = function() {
     return {
         address: this.rinfo1.address,
         port: this.rinfo1.port,

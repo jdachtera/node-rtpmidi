@@ -5,7 +5,7 @@ var util = require("util"),
     dgram = require("dgram"),
     ControlMessage = require("./ControlMessage"),
     MidiMessage = require("./MidiMessage"),
-    MdnsService = require("./MdnsService"),
+    MdnsService = require("./mdns"),
     Stream = require("./Stream");
 
 function Session(port, name) {
@@ -24,8 +24,9 @@ function Session(port, name) {
     this.messageChannel.on("message", this.handleMessage.bind(this));
     this.messageChannel.on("listening", this.listening.bind(this));
 
-    this.streamConnected = this.streamConnected.bind(this)
+    this.streamConnected = this.streamConnected.bind(this);
     this.streamDisconnected = this.streamDisconnected.bind(this);
+    this.deliverMessage = this.deliverMessage.bind(this);
 }
 
 util.inherits(Session, EventEmitter);
@@ -182,13 +183,19 @@ Session.prototype.streamDisconnected = function streamDisconnected(event) {
 Session.prototype.addStream = function addStream(stream) {
     stream.on('connected', this.streamConnected);
     stream.on('disconnected', this.streamDisconnected);
+    stream.on('message', this.deliverMessage);
     this.streams.push(stream);
 };
 
 Session.prototype.removeStream = function removeStream(stream) {
     stream.removeListener('connected', this.streamConnected);
     stream.removeListener('disconnected', this.streamDisconnected);
+    stream.removeListener('message', this.deliverMessage);
     this.streams.splice(this.streams.indexOf(stream));
+};
+
+Session.prototype.deliverMessage = function(message) {
+    this.emit('message', message);
 };
 
 Session.prototype.getStreams = function getStreams() {
@@ -217,14 +224,14 @@ Session.prototype.unpublish = function() {
     this.published = false;
 };
 
-Session.prototype.getJsonConfiguration = function(includeStreams) {
+Session.prototype.toJSON = function(includeStreams) {
     return {
         name: this.name,
         port: this.port,
         published: this.published,
         activated: this.readyState >=2,
         streams: includeStreams ? this.getStreams().map(function(stream) {
-            return stream.getJsonConfiguration();
+            return stream.toJSON();
         }) : undefined
     };
 };

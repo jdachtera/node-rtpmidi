@@ -6,53 +6,67 @@ var mdns = null,
     service_id = '_apple-midi._udp',
     publishedSessions = [],
     advertisments = [],
-    remoteSessions = [],
-    browser;
+    remoteSessions = {},
+    browser = null;
 
 try {
     mdns = require('mdns');
 } catch (e) {
-    console.log('mDNS discovery is not available.')
+    console.log('mDNS discovery is not available.');
 }
 
-function sessionDetails(session, index) {
+
+
+function sessionDetails(session) {
     return {
         name: session.name,
         port: session.port,
         address: session.addresses && session.addresses[0],
-        host: session.host,
-        index: index
+        host: session.host
     };
 }
 
-function MdnsService() {
+function MDnsService() {
     if (mdns) {
         browser = mdns.createBrowser(service_id);
-
         browser.on('serviceUp', function (service) {
-            var index = remoteSessions.push(service);
-            this.emit('remoteSessionUp', sessionDetails(service, index));
-        });
+            remoteSessions[service.name] = service;
+            this.emit('remoteSessionUp', sessionDetails(service));
+        }.bind(this));
         browser.on('serviceDown', function (service) {
-            var index = remoteSessions.indexOf(service);
-            remoteSessions.splice(index);
-            this.emit('remoteSessionDown', sessionDetails(service, index));
-        });
-        browser.start();
+            var srv = remoteSessions[service.name];
+            delete(remoteSessions[service.name]);
+            this.emit('remoteSessionDown', sessionDetails(srv));
+        }.bind(this));
+
     }
 }
 
-util.inherits(MdnsService, EventEmitter);
+util.inherits(MDnsService, EventEmitter);
 
-MdnsService.prototype.publish = function publish(session) {
+MDnsService.prototype.start = function () {
+    remoteSessions = {};
+    if (mdns) {
+        browser.start();
+    } else {
+        console.log('mDNS discovery is not available.')
+    }
+};
+
+MDnsService.prototype.stop = function() {
+    if (mdns && browser) {
+        browser.stop();
+    }
+};
+
+MDnsService.prototype.publish = function(session) {
     if (mdns) {
         if (publishedSessions.indexOf(session) !== -1) {
             return;
         }
-        var index = publishedSessions.length;
         publishedSessions.push(session);
         var ad = mdns.createAdvertisement(service_id, session.port, {
-            name: service.name
+            name: session.name
         });
         advertisments.push(ad);
         ad.start();
@@ -60,7 +74,7 @@ MdnsService.prototype.publish = function publish(session) {
 
 };
 
-MdnsService.prototype.unpublish = function unpublish(session) {
+MDnsService.prototype.unpublish = function(session) {
     if (mdns) {
         var index = publishedSessions.indexOf(session)
         if (index === -1) {
@@ -71,11 +85,14 @@ MdnsService.prototype.unpublish = function unpublish(session) {
         publishedSessions.splice(index);
         advertisments.splice(index);
     }
-
 };
 
-MdnsService.prototype.getRemoteSessions = function getRemoteSessions() {
-    return remoteSessions.map(sessionDetails);
+MDnsService.prototype.getRemoteSessions = function() {
+    var sessions = [];
+    for (var name in remoteSessions) {
+        sessions.push(sessionDetails(remoteSessions[name]));
+    }
+    return sessions;
 };
 
-module.exports = new MdnsService();
+module.exports = new MDnsService();

@@ -61,7 +61,7 @@ var api = {
 
 
 function startBrowsing() {
-    api.browse()
+    browsingFuture = api.browse()
         .on('Add', function(result) {
             api.bonjour('resolve', result).on('result', function(resolved) {
                 if (resolved.IPv4Address) {
@@ -90,23 +90,40 @@ function sessionDetails(result, resolved) {
 var publishedSessionsFutures = {},
     remoteSessions = {};
 
-function Service() {
-    process.nextTick(startBrowsing.bind(this));
-}
+function MDnsService() {}
 
-util.inherits(Service, EventEmitter);
+util.inherits(MDnsService, EventEmitter);
 
-Service.prototype.publish = function(session) {
+MDnsService.prototype.publish = function(session) {
     process.nextTick(api.publish.bind(api, session));
 };
 
-Service.prototype.unpublish = function(session) {
+var browsingFuture = null;
+
+MDnsService.prototype.start = function () {
+    if (browsingFuture === null) {
+        browsingFuture = true;
+        process.nextTick(startBrowsing.bind(this));
+    }
+};
+
+MDnsService.prototype.stop = function() {
+    if (browsingFuture && browsingFuture.cancel) {
+        browsingFuture.cancel();
+    }
+};
+
+MDnsService.prototype.stop = function() {
+
+};
+
+MDnsService.prototype.unpublish = function(session) {
     if (publishedSessionsFutures[session.name]) {
         publishedSessionsFutures[session.name].cancel();
     }
 };
 
-Service.prototype.getRemoteSessions = function() {
+MDnsService.prototype.getRemoteSessions = function() {
     var sessions = [];
     for (var k in remoteSessions) {
         if (remoteSessions.hasOwnProperty(k)) {
@@ -116,5 +133,5 @@ Service.prototype.getRemoteSessions = function() {
     return sessions;
 };
 
-module.exports = new Service();
+module.exports = new MDnsService();
 
