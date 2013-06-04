@@ -66,7 +66,7 @@ MDnsService.prototype.publish = function(session) {
         }
         publishedSessions.push(session);
         var ad = mdns.createAdvertisement(service_id, session.port, {
-            name: session.name
+            name: session.bonjourName
         });
         advertisments.push(ad);
         ad.start();

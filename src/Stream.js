@@ -15,8 +15,7 @@ function Stream(session) {
     EventEmitter.apply(this);
     this.session = session;
     this.token = null;
-    this.sourceSSRC = generateRandomInteger(4);
-    this.targetSSRC = null;
+    this.ssrc = null;
     this.rinfo1 = null;
     this.rinfo2 = null;
     this.name = '';
@@ -47,7 +46,7 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
     if (this.rinfo1 === null) {
         console.log("Invitation Accepted by " + message.name);
         this.name = message.name;
-        this.targetSSRC = message.ssrc;
+        this.ssrc = message.ssrc;
         this.rinfo1 = rinfo;
         this.sendInvitation({
             address: rinfo.address,
@@ -79,7 +78,7 @@ Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
         this.rinfo1 = rinfo;
         this.token = message.token;
         this.name = message.name;
-        this.targetSSRC = message.ssrc;
+        this.ssrc = message.ssrc;
         console.log("Got an invitation from " + message.name + " on channel 1");
     } else if (this.rinfo2 == null) {
         this.rinfo2 = rinfo;
@@ -96,7 +95,7 @@ Stream.prototype.handleSynchronization = function handleSynchronization(message,
     this.sendSynchronization(message);
 };
 
-Stream.prototype.handleEndstream = function handleEndstream() {
+Stream.prototype.handleEnd = function handleEndstream() {
     console.log(this.name + " ended the stream");
     clearInterval(this.syncInterval);
     this.isConnected = false;
@@ -112,7 +111,7 @@ Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
     this.session.sendMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation',
         token: this.token,
-        ssrc: this.sourceSSRC,
+        ssrc: this.session.ssrc,
         name: this.session.bonjourName
     }));
 };
@@ -121,18 +120,18 @@ Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo)
     this.session.sendMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation_accepted',
         token: this.token,
-        ssrc: this.sourceSSRC,
+        ssrc: this.session.ssrc,
         name: this.session.bonjourName
     }));
 };
 
-Stream.prototype.sendEndstream = function sendEndstream() {
+Stream.prototype.sendEndstream = function sendEndstream(callback) {
     this.session.sendMessage(this.rinfo1, new ControlMessage().mixin({
         command: 'end',
         token: this.token,
-        ssrc: this.sourceSSRC,
+        ssrc: this.session.ssrc,
         name: this.name
-    }));
+    }), callback);
 };
 
 Stream.prototype.sendSynchronization = function sendSynchronization(incomingSyncMessage) {
@@ -148,7 +147,7 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
             count: -1
         })
         .mixin(incomingSyncMessage);
-    answer.ssrc = this.sourceSSRC;
+    answer.ssrc = this.session.ssrc;
     answer.token = this.token;
     var timestamp = this.session.now();
     switch (answer.count) {
@@ -178,26 +177,31 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
 
 Stream.prototype.sendMessage = function sendMessage(message, callback) {
     var message = new MidiMessage().mixin(message)
-    message.ssrc = this.sourceSSRC;
+    message.ssrc = this.session.ssrc;
     message.sequenceNumber = this.lastSentSequenceNr = (this.lastSentSequenceNr + 1) % 0xf0000;
     message.timestamp = this.session.now();
     this.session.sendMessage(this.rinfo2, message, callback);
 };
 
-Stream.prototype.end = function end() {
-    if (this.isConnected) {
-        this.sendEndstream();
-    }
+Stream.prototype.end = function end(callback) {
     clearInterval(this.syncInterval);
-    this.isConnected = false;
-    this.emit('disconnected', {
-        stream: this
-    });
+	if (this.isConnected) {
+		this.sendEndstream(function() {
+			this.emit('disconnected', {
+				stream: this
+			});
+			this.isConnected = false;
+			callback && callback();
+		}.bind(this));
+	} else {
+		callback && callback()
+	}
 };
 
 Stream.prototype.toJSON = function() {
     return {
         address: this.rinfo1.address,
+		ssrc: this.ssrc,
         port: this.rinfo1.port,
         name: this.name
     };

@@ -11,27 +11,33 @@ var Session         = require('./Session'),
     manager = module.exports = new EventEmitter();
 
 MdnsService.on('remoteSessionUp', function(remoteSession) {
-    if (isNotLocalSession(remoteSession)) {
+    //if (isNotLocalSession(remoteSession)) {
         manager.emit('remoteSessionAdded', {remoteSession: remoteSession});
-    }
+    //}
 
 }.bind(this));
 
 MdnsService.on('remoteSessionDown', function(remoteSession) {
-    if (isNotLocalSession(remoteSession)) {
+    //if (isNotLocalSession(remoteSession)) {
         manager.emit('remoteSessionRemoved', {remoteSession: remoteSession});
-    }
+    //}
 }.bind(this));
+
+function generateRandomInteger(octets) {
+	return Math.round(Math.random() * Math.pow(2, 8 * octets));
+}
 
 function createSession(config, dontSave) {
     config = config || {};
-    config.name = config.name || os.hostname() + (sessions.length ? ('-' + sessions.length) : '');
+    config.bonjourName = config.bonjourName || os.hostname() + (sessions.length ? ('-' + sessions.length) : '');
+	config.localName = config.localName || 'Session ' + (sessions.length + 1);
+	config.ssrc = config.ssrc || generateRandomInteger(4);
     config.port = config.port || 5006;
     config.activated = config.hasOwnProperty('activated') ? config.activated : true;
     config.published = config.hasOwnProperty('published') ? config.published : true;
     config.streams = config.streams || [];
 
-    var session = new Session(config.port, config.name);
+    var session = new Session(config.port, config.localName, config.bonjourName, config.ssrc);
 
     sessions.push(session);
 
@@ -50,9 +56,59 @@ function createSession(config, dontSave) {
     }
 }
 function removeSession(session) {
-    session.end();
-    sessions.splice(sessions.indexOf(session));
-    manager.emit('sessionRemoved', {session: session});
+	if (session) {
+		session.end(function() {
+			sessions.splice(sessions.indexOf(session));
+			console.log(sessions);
+			manager.emit('sessionRemoved', {session: session});
+		}.bind(this));
+	}
+}
+
+function changeSession(config) {
+	var session = getSessionBySsrc(config.ssrc);
+	if (session) {
+		var restart = false, republish = false;
+
+		if (config.hasOwnProperty('bonjourName')  && config.bonjourName !== session.bonjourName) {
+			session.bonjourName = config.bonjourName;
+			republish = true;
+		}
+		if (config.hasOwnProperty('localName') && config.localName !== session.localName) {
+			session.localName = config.localName;
+		}
+		if (config.hasOwnProperty('port')  && config.port !== session.port) {
+			session.port = config.port;
+			restart = true;
+			republish = true;
+		}
+
+		var cb = function() {
+			session.removeListener('ready', cb);
+			if (config.published !== false && republish) {
+				session.publish();
+			}
+			this.emit('sessionChanged', {session: session});
+		}.bind(this);
+
+
+		if (config.published === false || republish || config.activated == false) {
+			session.unpublish();
+		}
+
+		if ((config.hasOwnProperty('activated') && config.activated !== (session.readyState === 2)) || restart) {
+			session.end(function() {
+				this.emit('sessionChanged', {session: session});
+				console.log(config, restart);
+				if (config.activated !== false || restart) {
+					session.on('ready', cb);
+					session.start();
+				}
+			}.bind(this))
+		} else {
+			cb();
+		}
+	}
 }
 
 function getSessionConfiguration() {
@@ -62,8 +118,9 @@ function getSessionConfiguration() {
 }
 
 function isNotLocalSession(config) {
-    for (var i = 0, session = sessions[i]; i < sessions.length; i++) {
-        if (session.name == config.name && session.port == config.port) {
+	for (var i = 0;i < sessions.length; i++) {
+		var session = sessions[i];
+        if (session.bonjourName == config.name && session.port == config.port) {
             return false;
         }
     }
@@ -71,7 +128,8 @@ function isNotLocalSession(config) {
 }
 
 function getSessionByName(name) {
-    for (var i = 0, session = sessions[i]; i < sessions.length; i++) {
+	for (var i = 0;i < sessions.length; i++) {
+		var session = sessions[i];
         if (session.name === name) {
             return session;
         }
@@ -80,7 +138,8 @@ function getSessionByName(name) {
 }
 
 function getSessionByPort(port) {
-    for (var i = 0, session = sessions[i]; i < sessions.length; i++) {
+	for (var i = 0;i < sessions.length; i++) {
+		var session = sessions[i];
         if (session.port === port) {
             return session;
         }
@@ -88,10 +147,34 @@ function getSessionByPort(port) {
     return null;
 }
 
-function reset() {
-    sessions.forEach(function(session) {
-        session.end();
-    });
+function getSessionBySsrc(ssrc) {
+	for (var i = 0;i < sessions.length; i++) {
+		var session = sessions[i];
+		if (session.ssrc == ssrc) {
+			return session;
+		}
+	}
+	return null;
+}
+
+process.on('SIGINT', function() {
+	reset(function() {
+		process.exit();
+	})
+});
+
+function reset(callback) {
+	var i = -1;
+	function next() {
+		i++;
+		var session = sessions[i];
+		if (session) {
+			session.end(next);
+		} else {
+			callback && callback();
+		}
+	}
+	next();
 }
 
 function startDiscovery() {
@@ -104,7 +187,9 @@ function stopDiscovery() {
 
 manager.createSession = createSession;
 manager.removeSession = removeSession;
+manager.changeSession = changeSession;
 manager.getSessionByName = getSessionByName;
+manager.getSessionBySsrc = getSessionBySsrc;
 manager.getSessionByPort = getSessionByPort;
 manager.startDiscovery = startDiscovery;
 manager.stopDiscovery = stopDiscovery;
@@ -114,7 +199,7 @@ manager.getSessions = function() {
     return sessions.slice();
 };
 manager.getRemoteSessions = function() {
-    return MdnsService.getRemoteSessions().filter(isNotLocalSession);
+    return MdnsService.getRemoteSessions().slice(); //filter(isNotLocalSession);
 };
 manager.storageHandler = function(handler) {
     storageHandler = handler;

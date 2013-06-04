@@ -4,8 +4,8 @@ var rtpmidi = require("./src/index"),
 var echo = false;
 
 session.on('ready', function () {
-    console.log("Session is is listening on port 5006.");
-    console.log("Commands: ");
+    console.log('Session is is listening on port 5006.');
+    console.log('Commands: ');
     console.log('c: connect to 127.0.0.1:5004');
     console.log('d: Toggle debug mode.')
     console.log('n: send a test note to all streams');

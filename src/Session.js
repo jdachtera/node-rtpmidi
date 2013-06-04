@@ -8,21 +8,19 @@ var util = require("util"),
     MdnsService = require("./mdns"),
     Stream = require("./Stream");
 
-function Session(port, name) {
+
+function Session(port, localName, bonjourName, ssrc) {
     EventEmitter.apply(this);
     this.streams = [];
-    this.name = name;
+    this.localName = localName;
+	this.bonjourName = bonjourName;
     this.port = port || 5004;
+	this.ssrc = ssrc;
     this.readyState = 0;
     this.published = false;
 
     this.debug = false;
-    this.controlChannel = dgram.createSocket("udp4");
-    this.controlChannel.on("message", this.handleMessage.bind(this));
-    this.controlChannel.on("listening", this.listening.bind(this));
-    this.messageChannel = dgram.createSocket("udp4");
-    this.messageChannel.on("message", this.handleMessage.bind(this));
-    this.messageChannel.on("listening", this.listening.bind(this));
+
 
     this.streamConnected = this.streamConnected.bind(this);
     this.streamDisconnected = this.streamDisconnected.bind(this);
@@ -33,6 +31,12 @@ util.inherits(Session, EventEmitter);
 
 Session.prototype.start = function start() {
     try {
+		this.controlChannel = dgram.createSocket("udp4");
+		this.controlChannel.on("message", this.handleMessage.bind(this));
+		this.controlChannel.on("listening", this.listening.bind(this));
+		this.messageChannel = dgram.createSocket("udp4");
+		this.messageChannel.on("message", this.handleMessage.bind(this));
+		this.messageChannel.on("listening", this.listening.bind(this));
         this.controlChannel.bind(this.port);
         this.messageChannel.bind(this.port + 1);
     } catch (e) {
@@ -40,15 +44,29 @@ Session.prototype.start = function start() {
     }
 };
 
-Session.prototype.end = function() {
-    this.unpublish();
-    this.controlChannel.close();
-    this.messageChannel.close();
-    this.readyState = 0;
-    this.published = false;
-    this.streams.forEach(function(stream) {
-        stream.end();
-    });
+Session.prototype.end = function(callback) {
+
+	var i = -1,
+		next = function() {
+			i++;
+			var stream = this.streams[i];
+			if (stream) {
+				stream.end(next);
+			} else {
+				this.unpublish();
+				this.controlChannel.close();
+				this.messageChannel.close();
+				this.readyState = 0;
+				this.published = false;
+				callback && callback();
+			}
+		}.bind(this);
+
+	if (this.readyState === 2) {
+		next();
+	} else {
+		callback && callback();
+	}
 };
 
 Session.prototype.now = (function () {
@@ -56,7 +74,7 @@ Session.prototype.now = (function () {
         var start = process.hrtime();
         return function () {
             var hrtime = process.hrtime(start);
-            var now = Math.round((hrtime[0] * 10e9 + hrtime[1]) / 10e5);
+            var now = Math.round((hrtime[0] * 10e9 + hrtime[1]) * 10e5);
             return now;
         };
     } else {
@@ -87,7 +105,7 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
         stream;
     if (appleMidiMessage.isValid) {
         stream = this.streams.filter(function (stream) {
-            return stream.targetSSRC == appleMidiMessage.ssrc || stream.token == appleMidiMessage.token;
+            return stream.ssrc == appleMidiMessage.ssrc || stream.token == appleMidiMessage.token;
         }).pop();
         this.emit('controlMessage', appleMidiMessage);
 
@@ -102,7 +120,7 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
     } else {
         var rtpMidiMessage = new MidiMessage().parseBuffer(message);
         stream = this.streams.filter(function (stream) {
-            return stream.targetSSRC == rtpMidiMessage.ssrc;
+            return stream.ssrc == rtpMidiMessage.ssrc;
         }).pop();
         if (stream) {
             stream.handleMidiMessage(rtpMidiMessage);
@@ -155,12 +173,12 @@ Session.prototype.connect = function connect(rinfo) {
     this.addStream(stream);
     var counter = 0;
     var connectionInterval = setInterval(function () {
-        if (counter < 40 && stream.targetSSRC === null) {
+        if (counter < 40 && stream.ssrc === null) {
             stream.sendInvitation(rinfo);
             counter++;
         } else {
             clearInterval(connectionInterval);
-            if (!stream.targetSSRC) {
+            if (!stream.ssrc) {
                 console.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
             }
         }
@@ -206,13 +224,12 @@ Session.prototype.getStreams = function getStreams() {
 
 Session.prototype.getStream = function getStream(ssrc) {
     for (var i = 0; i < this.streams.length; i++) {
-        if (this.streams[i].targetSSRC === ssrc) {
+        if (this.streams[i].ssrc === ssrc) {
             return this.streams[i];
         }
     }
     return null;
 };
-
 
 Session.prototype.publish = function() {
     MdnsService.publish(this);
@@ -226,7 +243,9 @@ Session.prototype.unpublish = function() {
 
 Session.prototype.toJSON = function(includeStreams) {
     return {
-        name: this.name,
+        bonjourName: this.bonjourName,
+		localName: this.localName,
+		ssrc: this.ssrc,
         port: this.port,
         published: this.published,
         activated: this.readyState >=2,

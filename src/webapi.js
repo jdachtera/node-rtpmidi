@@ -12,6 +12,10 @@ module.exports = function(port) {
         api.sockets.emit('sessionRemoved', event.session.toJSON());
     });
 
+	manager.on('sessionChanged', function(event) {
+		api.sockets.emit('sessionChanged', event.session.toJSON());
+	});
+
     manager.on('remoteSessionAdded', function(event) {
         api.sockets.emit('remoteSessionAdded', event.remoteSession);
     });
@@ -21,6 +25,41 @@ module.exports = function(port) {
     });
 
     api.sockets.on('connection', function(socket) {
+
+		socket.on('createSession', function(config) {
+			manager.createSession(config);
+		});
+
+		socket.on('removeSession', function(ssrc) {
+			var session = manager.getSessionBySsrc(ssrc);
+			if (session) {
+				console.log('removing session', ssrc, session);
+				manager.removeSession(session);
+			} else {
+				console.log('Session not found', ssrc, manager.getSessions().map(function(s) {return s.ssrc; }));
+			}
+		});
+
+		socket.on('changeSession', function(config) {
+			manager.changeSession(config);
+		});
+
+		socket.on('connectRemoteSession', function(ssrc, remoteSession) {
+			var session = manager.getSessionBySsrc(ssrc);
+			if (session) {
+				session.connect(remoteSession);
+			}
+		});
+
+		socket.on('disconnectRemoteSession', function(sessionSsrc, streamSsrc) {
+			var session = manager.getSessionBySsrc(sessionSsrc);
+			if (session) {
+				var stream = session.getStream(streamSsrc);
+				if (stream) {
+					stream.end();
+				}
+			}
+		});
 
         socket.emit('state', {
             sessions: manager.getSessions(),
@@ -42,8 +81,8 @@ module.exports = function(port) {
             }
         });
 
-        socket.on('midi', function(messages, port) {
-            var session = manager.getSessionByPort(port);
+        socket.on('midi', function(messages, ssrc) {
+            var session = manager.getSessionBySsrc(ssrc);
             if (session) {
                 session.sendMidiMessage(null, messages.map(function(message) {
                     return {data: message[0], deltaTime: message[1]};
@@ -53,12 +92,12 @@ module.exports = function(port) {
 
         var inspectedSession = null;
 
-        function streamAdded(stream) {
-            socket.emit('streamAdded', stream.toJSON());
+        function streamAdded(event) {
+            socket.emit('streamAdded', event.stream.toJSON());
         }
 
-        function streamRemoved(stream) {
-            socket.emit('streamRemoved', stream.toJSON());
+        function streamRemoved(event) {
+            socket.emit('streamRemoved', event.stream.toJSON());
         }
 
         function stopInspection() {
@@ -72,20 +111,27 @@ module.exports = function(port) {
             stopInspection();
         });
 
-        socket.on('inspect', function inspect(port) {
+        socket.on('inspect', function inspect(ssrc) {
             stopInspection();
-            inspectedSession = manager.getSessionByPort(port);
+
+            inspectedSession = manager.getSessionBySsrc(ssrc);
+
             if (inspectedSession) {
+				socket.emit('streams', inspectedSession.streams.map(function(stream) {
+					return stream.toJSON();
+				}));
                 inspectedSession.on('streamAdded', streamAdded);
                 inspectedSession.on('streamRemoved', streamRemoved);
             }
         });
     });
 
-    api.cleanup = function() {
-        manager.reset();
-        manager.stopDiscovery();
-        api.server.close();
+    api.cleanup = function(callback) {
+        manager.reset(function() {
+			manager.stopDiscovery();
+			api.server.close();
+			callback && callback();
+		});
     };
 
     manager.startDiscovery();
