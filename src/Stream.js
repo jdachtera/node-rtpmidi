@@ -40,6 +40,7 @@ Stream.prototype.handleControlMessage = function handleControlMessage(message, r
 
 Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
     this.emit('message', message);
+    this.session.emit('message', message);
 };
 
 Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
