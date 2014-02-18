@@ -74,7 +74,7 @@ Session.prototype.now = (function () {
         var start = process.hrtime();
         return function () {
             var hrtime = process.hrtime(start);
-            var now = Math.round((hrtime[0] * 10e9 + hrtime[1]) * 10e5);
+            var now = Math.round((/*hrtime[0] + */hrtime[0]));
             return now;
         };
     } else {
