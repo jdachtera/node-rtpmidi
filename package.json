@@ -1,6 +1,6 @@
 {
     "name": "rtpmidi",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
     "description": "A RTP Midi server. Can be used to send midi messages through the network",
     "main": "./index.js",
