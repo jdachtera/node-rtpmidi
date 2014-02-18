@@ -30,8 +30,8 @@ function generateRandomInteger(octets) {
 function createSession(config, dontSave) {
     config = config || {};
     config.bonjourName = config.bonjourName || os.hostname() + (sessions.length ? ('-' + sessions.length) : '');
-	config.localName = config.localName || 'Session ' + (sessions.length + 1);
-	config.ssrc = config.ssrc || generateRandomInteger(4);
+	  config.localName = config.localName || 'Session ' + (sessions.length + 1);
+	  config.ssrc = config.ssrc || generateRandomInteger(4);
     config.port = config.port || 5006;
     config.activated = config.hasOwnProperty('activated') ? config.activated : true;
     config.published = config.hasOwnProperty('published') ? config.published : true;
@@ -54,6 +54,7 @@ function createSession(config, dontSave) {
     if (!dontSave) {
         storageHandler({method: 'write', sessions: [session.toJSON()]}, function() {});
     }
+    return session;
 }
 function removeSession(session) {
 	if (session) {
@@ -207,7 +208,7 @@ manager.storageHandler = function(handler) {
 manager.storageHandler(function(config, callback) {
     switch(config.method) {
         case 'read':
-            callback(null, JSON.parse(inMemoryStore['sessions'] || '[{}]'));
+            callback(null, JSON.parse(inMemoryStore['sessions'] || '[]'));
             break;
         case 'write':
             inMemoryStore['sessions'] = JSON.stringify(config.sessions || []);
