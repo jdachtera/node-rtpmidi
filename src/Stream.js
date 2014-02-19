@@ -20,6 +20,9 @@ function Stream(session) {
     this.rinfo2 = null;
     this.name = '';
     this.lastSentSequenceNr = Math.round(Math.random() * 0xffff);
+    this.firstReceivedSequenceNumber = -1;
+    this.lastReceivedSequenceNumber = -1;
+    this.lostSequenceNumbers = [];
     this.latency = null;
     this.subscribers = [];
     this.isConnected = false;
@@ -39,8 +42,20 @@ Stream.prototype.handleControlMessage = function handleControlMessage(message, r
 };
 
 Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
-    this.emit('message', message);
-    this.session.emit('message', message);
+    if (this.firstReceivedSequenceNumber !== -1) {
+        for (var i = this.lastReceivedSequenceNumber + 1; i < message.sequenceNumber; i++) {
+            this.lostSequenceNumbers.push(i);
+        }
+    } else {
+        this.firstReceivedSequenceNumber = message.sequenceNumber;
+    }  
+    
+
+    this.lastReceivedSequenceNumber = message.sequenceNumber;
+
+    message.commands.forEach(function(command) {
+        this.emit('message', command.deltaTime, command.data);
+    }.bind(this));
 };
 
 Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {

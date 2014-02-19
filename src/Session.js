@@ -212,8 +212,8 @@ Session.prototype.removeStream = function removeStream(stream) {
     this.streams.splice(this.streams.indexOf(stream));
 };
 
-Session.prototype.deliverMessage = function(message) {
-    this.emit('message', message);
+Session.prototype.deliverMessage = function(deltaTime, message) {
+    this.emit('message', deltaTime, message);
 };
 
 Session.prototype.getStreams = function getStreams() {
