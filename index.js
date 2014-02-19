@@ -14,5 +14,6 @@ module.exports = {
     Stream:             require('./src/Stream'),
     AbstractMessage:    require('./src/AbstractMessage'),
     ControlMessage:     require('./src/ControlMessage'),
-    RTPMessage:         require('./src/RTPMessage')
+    RTPMessage:         require('./src/RTPMessage'),
+    SMTPE:              require('./src/SMTPE') 
 };

@@ -9,7 +9,8 @@ var util = require("util"),
         0xb0: 2,
         0xa0: 2,
         0x90: 2,
-        0x80: 2
+        0x80: 2,
+        0xf1: 1
     },
     flags = {
         systemMessage: 0xf0,
@@ -62,6 +63,8 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     commandStartOffset = this.bigLength ? 2 : 1;
     offset = commandStartOffset;
 
+
+
     while (offset < this.length + commandStartOffset - 1) {
         var command = {
             deltaTime: 0
@@ -93,7 +96,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
                 data_length++;
             }
         } else {
-            data_length = types_data_length[statusByte & 0xf0];
+            data_length = types_data_length[statusByte] || types_data_length[statusByte & 0xf0];
         }
         command.data = new Buffer(1 + data_length);
         command.data[0] = statusByte;
@@ -106,10 +109,71 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             offset += data_length;
         }
 
-        this.commands.push(command);
+        this.commands.push(command);        
+    }
+    if (this.hasJournal) {        
+        this.journal = this.parseJournal(this.payload.slice(offset));            
     }
     return this;
 };
+
+MidiMessage.prototype.parseJournal = function(payload) {
+    var journal = journal = {};
+    var journalHeader = payload[0];
+
+    journal.singlePacketLoss = !!(journalHeader & 0x80);
+    journal.hasSystemJournal = !!(journalHeader & 0x40);
+    journal.hasChannelJournal = !!(journalHeader & 0x20);
+    journal.enhancedEncoding = !!(journalHeader & 0x10);
+    
+    journal.checkPointPacketSequenceNumber = payload.readUInt16BE(1);
+    journal.channelJournals = [];
+
+    var journalOffset = 3;
+
+    if (journal.hasSystemJournal) {
+        var systemJournal = journal.systemJournal =  {};
+        systemJournal.presentChapters = {};
+        systemJournal.presentChapters.S = !!(payload[journalOffset] & 0x80);
+        systemJournal.presentChapters.D = !!(payload[journalOffset] & 0x40);
+        systemJournal.presentChapters.V = !!(payload[journalOffset] & 0x20);
+        systemJournal.presentChapters.Q = !!(payload[journalOffset] & 0x10);
+        systemJournal.presentChapters.F = !!(payload[journalOffset] & 0x08);
+        systemJournal.presentChapters.X = !!(payload[journalOffset] & 0x04);
+        systemJournal.length = ((payload[journalOffset] & 0x3) << 8) | payload[journalOffset + 1];
+        journalOffset += systemJournal.length;
+    }
+
+    if (journal.hasChannelJournal) {
+        var channel = 0,
+            channelJournal;
+
+        journal.totalChannels = (journalHeader & 0x0f) + 1;
+        while (channel < journal.totalChannels && journalOffset < payload.length) {
+            channelJournal = {};
+            channelJournal.channel = (payload[journalOffset] >> 3) & 0x0f;
+            channelJournal.s = !!(payload[journalOffset] & 0x80);
+            channelJournal.h = !!(payload[journalOffset] & 0x01);
+            channelJournal.length = ((payload[journalOffset] & 0x3) << 8) | payload[journalOffset + 1];
+            channelJournal.presentChapters = {};
+            channelJournal.presentChapters.P = !!(payload[journalOffset + 2] & 0x80);
+            channelJournal.presentChapters.C = !!(payload[journalOffset + 2] & 0x40);
+            channelJournal.presentChapters.M = !!(payload[journalOffset + 2] & 0x20);
+            channelJournal.presentChapters.W = !!(payload[journalOffset + 2] & 0x10);
+            channelJournal.presentChapters.N = !!(payload[journalOffset + 2] & 0x08);
+            channelJournal.presentChapters.E = !!(payload[journalOffset + 2] & 0x04);
+            channelJournal.presentChapters.T = !!(payload[journalOffset + 2] & 0x02);
+            channelJournal.presentChapters.A = !!(payload[journalOffset + 2] & 0x01);
+
+            journalOffset += channelJournal.length;
+
+            journal.channelJournals.push(channelJournal);
+
+            channel++;
+        }
+    }
+    return journal;
+}
 
 MidiMessage.prototype.generateBuffer = function generateBuffer() {
     var payload = [],
