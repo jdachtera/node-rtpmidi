@@ -59,9 +59,17 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             this.ssrc = buffer.readUInt32BE(4, 8);
             this.count = buffer.readUInt8(8);
             this.padding = (buffer.readUInt8(9) << 0xF0) + buffer.readUInt16BE(10);
-            this.timestamp1 = [buffer.readUInt32BE(12), buffer.readUInt32BE(16)];
-            this.timestamp2 = [buffer.readUInt32BE(20), buffer.readUInt32BE(24)];
-            this.timestamp3 = [buffer.readUInt32BE(28), buffer.readUInt32BE(32)];
+            this.timestamp1 = buffer.slice(12, 20); //[buffer.readUInt32BE(12), buffer.readUInt32BE(16)];
+            this.timestamp2 = buffer.slice(20, 28); //[buffer.readUInt32BE(20), buffer.readUInt32BE(24)];
+            this.timestamp3 = buffer.slice(28, 36); //[buffer.readUInt32BE(28), buffer.readUInt32BE(32)];
+            break;
+        case 'receiver_feedback':
+            this.ssrc = buffer.readUInt32BE(4, 8);
+            this.sequenceNumber = buffer.readUInt16BE(8);
+            break;
+
+
+
     }
     return this;
 };
@@ -94,12 +102,26 @@ ControlMessage.prototype.generateBuffer = function generateBuffer() {
             buffer.writeUInt8(this.count, 8);
             buffer.writeUInt8(this.padding >>> 0xF0, 9);
             buffer.writeUInt16BE(this.padding & 0x00FFFF, 10);
+
+            this.timestamp1.copy(buffer, 12);
+            this.timestamp2.copy(buffer, 20);
+            this.timestamp3.copy(buffer, 28);
+
+            /*
             buffer.writeUInt32BE(this.timestamp1[0], 12);
             buffer.writeUInt32BE(this.timestamp1[1], 16);
             buffer.writeUInt32BE(this.timestamp2[0], 20);
             buffer.writeUInt32BE(this.timestamp2[1], 24);
             buffer.writeUInt32BE(this.timestamp3[0], 28);
             buffer.writeUInt32BE(this.timestamp3[1], 32);
+            */
+            break;
+        case 'receiver_feedback':
+            buffer = new Buffer(12);
+            buffer.writeUInt16BE(this.start, 0);
+            buffer.writeUInt16BE(commandByte, 2);
+            buffer.writeUInt32BE(this.ssrc, 4);
+            buffer.writeUInt16BE(this.sequenceNumber, 8);
             break;
         default:
             assert.fail('Not a valid command: "' + this.command + '"');

@@ -70,19 +70,30 @@ Session.prototype.end = function(callback) {
 };
 
 Session.prototype.now = (function () {
-    if (process.hrtime) {
-        var start = process.hrtime();
-        return function () {
-            var hrtime = process.hrtime(start);
-            var now = Math.round((/*hrtime[0] + */hrtime[0]));
-            return now;
-        };
-    } else {
-        var start = Date.now();
-        return function now() {
-            return (Date.now() - start) * 10;
-        };
+  var rate = 10000,
+      maxValue = Math.pow(2, 32),
+      tickSource,
+      start
+    ;
+
+  if (process.hrtime) {
+    start = process.hrtime();
+    tickSource = function() {
+      var hrtime = process.hrtime(start);
+      var now = hrtime[0] + hrtime[1] / (1000 * 1000 * 1000);
+      return now;
     }
+  } else {
+    start = Date.now();
+    tickSource = function() {
+      return (Date.now() - start) / 1000;
+    }
+  }
+
+  return function() {
+    var now = Math.round(tickSource() * rate);
+    return now % maxValue;
+  }
 
 })();
 
@@ -129,7 +140,7 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
     }
 };
 
-Session.prototype.sendMessage = function sendMessage(rinfo, message, callback) {
+Session.prototype.sendControlMessage = function sendMessage(rinfo, message, callback) {
     message.generateBuffer();
 
     if (true || message instanceof MidiMessage) {
@@ -139,15 +150,18 @@ Session.prototype.sendMessage = function sendMessage(rinfo, message, callback) {
     if (message.isValid) {
 
         (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function () {
-            this.log("Outgoing Message = ", message.buffer);
-            callback && callback();
+          this.log("Outgoing Message = ", message.buffer);
+          callback && callback();
         }.bind(this));
     } else {
-        console.error("Ignoring invalid message");
+        this.log("Ignoring invalid message");
     }
 };
 
-Session.prototype.sendMidiMessage = function sendMidiMessage(ssrc, commands) {
+Session.prototype.sendMessages = function(messages, ssrc) {
+    var commands = messages.map(function(message) {
+        return {deltaTime: 0, data: message};
+    });
     if (ssrc) {
         var stream = this.getStream(ssrc);
         if (stream) {
@@ -168,6 +182,13 @@ Session.prototype.sendMidiMessage = function sendMidiMessage(ssrc, commands) {
     }
 };
 
+Session.prototype.sendMessage = function sendMessage(command, ssrc) {
+    if (!Buffer.isBuffer(command)) {
+        command = new Buffer(command);
+    }
+    this.sendMessages([command], ssrc);    
+};
+
 Session.prototype.connect = function connect(rinfo) {
     var stream = new Stream(this);
     this.addStream(stream);
@@ -179,7 +200,7 @@ Session.prototype.connect = function connect(rinfo) {
         } else {
             clearInterval(connectionInterval);
             if (!stream.ssrc) {
-                console.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
+                this.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
             }
         }
     }, 1500);

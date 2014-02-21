@@ -13,7 +13,7 @@ function SMTPE() {
 util.inherits(SMTPE, EventEmitter);
 
 
-SMTPE.prototype.receive = function(sessionOrStream) {
+SMTPE.prototype.setSource = function(sessionOrStream) {
 	sessionOrStream.on('message', function(deltaTime, message) {
 		if (message[0] === 0xf1) {
 			this.applyQuarterTime(message[1]);
