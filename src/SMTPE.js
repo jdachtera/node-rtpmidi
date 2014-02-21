@@ -38,6 +38,8 @@ SMTPE.prototype.applyQuarterTime = function(quarterTime) {
 		operator = 0x0f;
 	}
 
+  var originalString = this.toString();
+
 	switch(type) {
 		case 0:
 		case 1:
@@ -60,7 +62,10 @@ SMTPE.prototype.applyQuarterTime = function(quarterTime) {
 			this.hours = this.hours & operator | nibble;			
 			break;
 	}
-	this.emit('change', type);
+
+  if (this.toString() !== originalString) {
+    this.emit('change', type);
+  }
 };
 
 function pad(number) {
