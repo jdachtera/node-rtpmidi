@@ -3,14 +3,42 @@
 var util = require("util"),
     RTPMessage = require("./RTPMessage"),
     types_data_length = {
-        0xe0: 2,
-        0xd0: 1,
-        0xc0: 1,
-        0xb0: 2,
-        0xa0: 2,
-        0x90: 2,
-        0x80: 2,
-        0xf1: 1
+
+        // Channel Messages
+        0x80: 2, // Note Off
+        0x90: 2, // Note On
+        0xa0: 2, // Polyphonic aftertouch
+        0xb0: 2, // Control/Mode Change
+        0xc0: 1, // Program Change
+        0xd0: 1, // Channel Aftertouch
+        0xe0: 2, // Pitch Wheel
+
+        // System Common Messages
+        /*
+        0xf0: SysEx Start, length is determined by SysEx end byte
+        */
+        0xf1: 1, // Quarter time
+        0xf2: 2, // Song Position Pointer
+        0xf3: 1, // Song select
+        /*
+        0xf4: Undefined
+        0xf5: Undefined
+        */
+        0xf6: 0, // Tune request (no data)
+        /*
+        0xf7: End of SysEx
+        */
+
+        // System Realtime Messages
+        0xf8: 0, // Timing clock
+        0xfa: 0, // Start
+        0xfb: 0, // Continue
+        0xfc: 0, // Stop
+        /*
+        0xfd: Undefined
+        */
+        0xfe: 0, // Active Sensing
+        0xff: 0, // System Reset
     },
     flags = {
         systemMessage: 0xf0,
@@ -63,8 +91,6 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     commandStartOffset = this.bigLength ? 2 : 1;
     offset = commandStartOffset;
 
-
-
     while (offset < this.length + commandStartOffset - 1) {
         var command = {
             deltaTime: 0
@@ -90,11 +116,15 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         } else if (lastStatusByte) {
             statusByte = lastStatusByte;
         }
+
+        // Parse SysEx
         if (statusByte === 0xf0) {
-            data_length = 1;
+            data_length = 0;
             while (payload.length > offset + data_length && payload.readUInt8(offset + data_length) !== 0xf7) {
                 data_length++;
             }
+            data_length++;
+
         } else {
             data_length = types_data_length[statusByte] || types_data_length[statusByte & 0xf0];
         }
@@ -108,7 +138,6 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             payload.copy(command.data, 1, offset, offset + data_length);
             offset += data_length;
         }
-
         this.commands.push(command);        
     }
     if (this.hasJournal) {        

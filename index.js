@@ -15,5 +15,5 @@ module.exports = {
     AbstractMessage:    require('./src/AbstractMessage'),
     ControlMessage:     require('./src/ControlMessage'),
     RTPMessage:         require('./src/RTPMessage'),
-    SMTPE:              require('./src/SMTPE') 
+    MTC:                require('./src/MTC')
 };
