@@ -203,7 +203,7 @@ Session.prototype.connect = function connect(rinfo) {
                 this.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
             }
         }
-    }, 1500);
+    }.bind(this), 1500);
 };
 
 Session.prototype.streamConnected = function streamConnected(event) {

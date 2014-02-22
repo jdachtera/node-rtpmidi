@@ -200,7 +200,7 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
 
 Stream.prototype.sendReceiverFeedback = function(callback) {
     if (this.lostSequenceNumbers.length) {
-        this.session.log('Lost packages: ', lostSequenceNumbers);
+        this.session.log('Lost packages: ', this.lostSequenceNumbers);
     }
     this.session.sendControlMessage(this.rinfo1, new ControlMessage().mixin({
         command: 'receiver_feedback',
