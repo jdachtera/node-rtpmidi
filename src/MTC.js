@@ -60,6 +60,7 @@ MTC.prototype.applyFullTime = function(message) {
 // Build the MTC timestamp of 8 subsequent quarter time commands
 // http://www.blitter.com/~russtopia/MIDI/~jglatt/tech/mtc.htm
 MTC.prototype.applyQuarterTime = function(message) {
+
   var quarterTime = message[1],
       type = (quarterTime >> 4) & 0x7,
 		  nibble = quarterTime & 0x0f,
@@ -73,8 +74,6 @@ MTC.prototype.applyQuarterTime = function(message) {
 		nibble = nibble << 4;
 		operator = 0x0f;
 	}
-
-  var originalString = this.getSMTPEString();
 
 	switch(type) {
 		case 0:
@@ -90,18 +89,15 @@ MTC.prototype.applyQuarterTime = function(message) {
 			this.minutes = this.minutes & operator | nibble;
 			break;
 		case 6:
+      this.hours = this.hours & operator | nibble;
+      break;
 		case 7:
-			if (type % 2 === 1) {
-				this.type = (nibble >> 5) & 0x3;
-				nibble = nibble & 0x10;
-			}
-			this.hours = this.hours & operator | nibble;			
+      this.type = (nibble >> 5) & 0x3;
+      nibble = nibble & 0x10;
+      this.hours = this.hours & operator | nibble;
+      this.emit('change');
 			break;
 	}
-
-  if (this.getSMTPEString() !== originalString) {
-    this.emit('change');
-  }
 };
 
 function pad(number) {
