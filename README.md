@@ -16,4 +16,5 @@ There is also a port of this library to the chrome apps platform: [rtpmidi-chrom
 * More testing
 * Recovery Journal
 * Expose via websockets & create a client side api compatible to the [Web Midi API](http://webaudio.github.io/web-midi-api/)
+* Port to cordova via [cordova-plugin-datagram](https://github.com/gramakri/cordova-plugin-datagram) or something similar
 * ...
