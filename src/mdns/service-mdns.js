@@ -10,7 +10,7 @@ var mdns = null,
     browser = null;
 
 try {
-    mdns = require('mdns');
+    mdns = require('mdns2');
 } catch (e) {
     console.log('mDNS discovery is not available.');
 }
@@ -18,10 +18,25 @@ try {
 
 
 function sessionDetails(session) {
+    var addressV4 = null,
+        addressV6 = null;
+
+    if (session.addresses) {
+      session.addresses.forEach(function(address) {
+
+        if (address.search(/\./) > -1 && !addressV4) {
+          addressV4 = address;
+        } else if (address.search(':') > -1 && !addressV6) {
+          addressV6 = address;
+        }
+      });
+    }
+
     return {
         name: session.name,
         port: session.port,
-        address: session.addresses && session.addresses[0],
+        address: addressV4,
+        addressV6: addressV6,
         host: session.host
     };
 }
@@ -76,7 +91,7 @@ MDnsService.prototype.publish = function(session) {
 
 MDnsService.prototype.unpublish = function(session) {
     if (mdns) {
-        var index = publishedSessions.indexOf(session)
+        var index = publishedSessions.indexOf(session);
         if (index === -1) {
             return;
         }
@@ -90,7 +105,9 @@ MDnsService.prototype.unpublish = function(session) {
 MDnsService.prototype.getRemoteSessions = function() {
     var sessions = [];
     for (var name in remoteSessions) {
-        sessions.push(sessionDetails(remoteSessions[name]));
+        if (remoteSessions.hasOwnProperty(name)) {
+          sessions.push(sessionDetails(remoteSessions[name]));
+        }
     }
     return sessions;
 };

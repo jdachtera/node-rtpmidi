@@ -9,7 +9,7 @@
         "url": "http://github.com/jdachtera/node-rtpmidi.git"
     },
 	"optionalDependencies": {
-		"mdns": "1.x"
+		"mdns2": "2.x"
 	},
     "keywords": [
         "midi",

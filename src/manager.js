@@ -1,3 +1,4 @@
+
 'use strict';
 
 var Session         = require('./Session'),
@@ -31,21 +32,14 @@ function createSession(config, dontSave) {
     config = config || {};
     config.bonjourName = config.bonjourName || os.hostname() + (sessions.length ? ('-' + sessions.length) : '');
 	  config.localName = config.localName || 'Session ' + (sessions.length + 1);
-	  config.ssrc = config.ssrc || generateRandomInteger(4);
-    config.port = config.port || 5006;
     config.activated = config.hasOwnProperty('activated') ? config.activated : true;
     config.published = config.hasOwnProperty('published') ? config.published : true;
     config.streams = config.streams || [];
 
-    var session = new Session(config.port, config.localName, config.bonjourName, config.ssrc);
+    var session = new Session(config.port, config.localName, config.bonjourName, config.ssrc, config.published, config.ipVersion);
 
     sessions.push(session);
 
-    if (config.published) {
-        session.on('ready', function() {
-            session.publish();
-        });
-    }
     if (config.activated) {
         session.start();
     }

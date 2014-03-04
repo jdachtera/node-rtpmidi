@@ -15,5 +15,6 @@ module.exports = {
     AbstractMessage:    require('./src/AbstractMessage'),
     ControlMessage:     require('./src/ControlMessage'),
     RTPMessage:         require('./src/RTPMessage'),
-    MTC:                require('./src/MTC')
+    MTC:                require('./src/MTC'),
+    MdnsService:        require('./src/mdns')
 };

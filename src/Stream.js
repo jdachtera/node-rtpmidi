@@ -111,7 +111,7 @@ Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
     this.sendInvitationAccepted(rinfo);
 };
 
-Stream.prototype.handleSynchronization = function handleSynchronization(message, rinfo) {
+Stream.prototype.handleSynchronization = function handleSynchronization(message) {
     this.sendSynchronization(message);
 };
 
@@ -124,7 +124,7 @@ Stream.prototype.handleEnd = function handleEndstream() {
     });
 };
 
-Stream.prototype.handleReceiver_feedback = function(message, rinfo) {
+Stream.prototype.handleReceiver_feedback = function(message) {
   this.session.log('Got receiver feedback', 'SSRC ' + message.ssrc + ' is at ' + message.sequenceNumber + '. Current is ' + this.lastSentSequenceNr);
 };
 
@@ -132,7 +132,7 @@ Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
     if (!this.token) {
         this.token = generateRandomInteger(4);
     }
-    this.session.sendControlMessage(rinfo, new ControlMessage().mixin({
+    this.session.sendUdpMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation',
         token: this.token,
         ssrc: this.session.ssrc,
@@ -141,7 +141,7 @@ Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
 };
 
 Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo) {
-    this.session.sendControlMessage(rinfo, new ControlMessage().mixin({
+    this.session.sendUdpMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation_accepted',
         token: this.token,
         ssrc: this.session.ssrc,
@@ -150,7 +150,7 @@ Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo)
 };
 
 Stream.prototype.sendEndstream = function sendEndstream(callback) {
-    this.session.sendControlMessage(this.rinfo1, new ControlMessage().mixin({
+    this.session.sendUdpMessage(this.rinfo1, new ControlMessage().mixin({
         command: 'end',
         token: this.token,
         ssrc: this.session.ssrc,
@@ -193,7 +193,7 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
     }
 
     if (answer.count < 3) {
-        this.session.sendControlMessage(this.rinfo2, answer);
+        this.session.sendUdpMessage(this.rinfo2, answer);
     }
     this.session.log("Synchronizing. Latency: " + this.latency);
 };
@@ -202,19 +202,19 @@ Stream.prototype.sendReceiverFeedback = function(callback) {
     if (this.lostSequenceNumbers.length) {
         this.session.log('Lost packages: ', this.lostSequenceNumbers);
     }
-    this.session.sendControlMessage(this.rinfo1, new ControlMessage().mixin({
+    this.session.sendUdpMessage(this.rinfo1, new ControlMessage().mixin({
         command: 'receiver_feedback',
         ssrc: this.session.ssrc,
         sequenceNumber: this.lastReceivedSequenceNumber
     }), callback);
-}
+};
 
 Stream.prototype.sendMessage = function sendMessage(message, callback) {
-    var message = new MidiMessage().mixin(message)
+    message = new MidiMessage().mixin(message);
     message.ssrc = this.session.ssrc;
     message.sequenceNumber = this.lastSentSequenceNr = (this.lastSentSequenceNr + 1) % 0xf0000;
     message.timestamp = this.session.now();
-    this.session.sendControlMessage(this.rinfo2, message, callback);
+    this.session.sendUdpMessage(this.rinfo2, message, callback);
 };
 
 Stream.prototype.end = function end(callback) {

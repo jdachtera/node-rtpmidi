@@ -9,17 +9,21 @@ var util = require("util"),
     Stream = require("./Stream");
 
 
-function Session(port, localName, bonjourName, ssrc) {
+function Session(port, localName, bonjourName, ssrc, published, ipVersion) {
     EventEmitter.apply(this);
     this.streams = [];
     this.localName = localName;
-	this.bonjourName = bonjourName;
+	  this.bonjourName = bonjourName;
     this.port = port || 5004;
-	this.ssrc = ssrc;
+	  this.ssrc = ssrc || Math.round(Math.random() * Math.pow(2, 8 * 4));
     this.readyState = 0;
-    this.published = false;
+    this.published = !!published;
 
     this.debug = false;
+
+    this.ipVersion = ipVersion === 6 ? 6 : 4;
+
+
 
 
     this.streamConnected = this.streamConnected.bind(this);
@@ -30,11 +34,18 @@ function Session(port, localName, bonjourName, ssrc) {
 util.inherits(Session, EventEmitter);
 
 Session.prototype.start = function start() {
+    if (this.published) {
+      if (this.published) {
+        this.on('ready', function() {
+          this.publish();
+        }.bind(this));
+      }
+    }
     try {
-		this.controlChannel = dgram.createSocket("udp4");
+		this.controlChannel = dgram.createSocket("udp" + this.ipVersion);
 		this.controlChannel.on("message", this.handleMessage.bind(this));
 		this.controlChannel.on("listening", this.listening.bind(this));
-		this.messageChannel = dgram.createSocket("udp4");
+		this.messageChannel = dgram.createSocket("udp" + this.ipVersion);
 		this.messageChannel.on("message", this.handleMessage.bind(this));
 		this.messageChannel.on("listening", this.listening.bind(this));
         this.controlChannel.bind(this.port);
@@ -42,6 +53,7 @@ Session.prototype.start = function start() {
     } catch (e) {
         this.emit('error', e);
     }
+
 };
 
 Session.prototype.end = function(callback) {
@@ -80,8 +92,7 @@ Session.prototype.now = (function () {
     start = process.hrtime();
     tickSource = function() {
       var hrtime = process.hrtime(start);
-      var now = hrtime[0] + hrtime[1] / (1000 * 1000 * 1000);
-      return now;
+      return hrtime[0] + hrtime[1] / (1000 * 1000 * 1000);
     }
   } else {
     start = Date.now();
@@ -140,7 +151,7 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
     }
 };
 
-Session.prototype.sendControlMessage = function sendMessage(rinfo, message, callback) {
+Session.prototype.sendUdpMessage = function sendMessage(rinfo, message, callback) {
     message.generateBuffer();
 
     if (true || message instanceof MidiMessage) {
@@ -150,7 +161,7 @@ Session.prototype.sendControlMessage = function sendMessage(rinfo, message, call
     if (message.isValid) {
 
         (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function () {
-          this.log("Outgoing Message = ", message.buffer);
+          this.log("Outgoing Message = ", message.buffer, rinfo.port, rinfo.address);
           callback && callback();
         }.bind(this));
     } else {
@@ -191,6 +202,9 @@ Session.prototype.sendMessage = function sendMessage(command, ssrc) {
 
 Session.prototype.connect = function connect(rinfo) {
     var stream = new Stream(this);
+
+    rinfo = {address: (this.ipVersion === 6 && rinfo.addressV6) ? rinfo.addressV6 : rinfo.address, port: rinfo.port};
+
     this.addStream(stream);
     var counter = 0;
     var connectionInterval = setInterval(function () {
