@@ -7,13 +7,18 @@ var mdns = null,
     publishedSessions = [],
     advertisments = [],
     remoteSessions = {},
-    browser = null;
+    browser = null,
+    avahi_pub;
 
 try {
     mdns = require('mdns2');
 } catch (e) {
     console.log('mDNS discovery is not available.');
 }
+
+try {
+  avahi_pub = require('avahi_pub');
+} catch(e) {}
 
 
 
@@ -75,11 +80,20 @@ MDnsService.prototype.stop = function() {
 };
 
 MDnsService.prototype.publish = function(session) {
-    if (mdns) {
-        if (publishedSessions.indexOf(session) !== -1) {
-            return;
-        }
-        publishedSessions.push(session);
+    if (publishedSessions.indexOf(session) !== -1) {
+      return;
+    }
+    publishedSessions.push(session);
+
+    if (avahi_pub && avahi_pub.isSupported()) {
+      var ad = avahi_pub.publish({
+        name: session.bonjourName,
+        type: service_id,
+        port: session.port
+      });
+      advertisments.push(ad);
+
+    } else if (mdns) {
         var ad = mdns.createAdvertisement(service_id, session.port, {
             name: session.bonjourName
         });
@@ -90,16 +104,20 @@ MDnsService.prototype.publish = function(session) {
 };
 
 MDnsService.prototype.unpublish = function(session) {
-    if (mdns) {
-        var index = publishedSessions.indexOf(session);
-        if (index === -1) {
-            return;
-        }
-        var ad = advertisments[index];
-        ad.stop();
-        publishedSessions.splice(index);
-        advertisments.splice(index);
-    }
+  var index = publishedSessions.indexOf(session);
+  if (index === -1) {
+    return;
+  }
+  var ad = advertisments[index];
+
+  if (avahi_pub && avahi_pub.isSupported()) {
+    ad.stop();
+  } else if (mdns) {
+    ad.stop();
+  }
+
+  publishedSessions.splice(index);
+  advertisments.splice(index);
 };
 
 MDnsService.prototype.getRemoteSessions = function() {

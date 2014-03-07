@@ -1,25 +1,26 @@
 {
-    "name": "rtpmidi",
-    "version": "0.1.1",
-    "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
-    "description": "A RTP Midi server. Can be used to send midi messages through the network",
-    "main": "./index.js",
-    "repository": {
-        "type": "git",
-        "url": "http://github.com/jdachtera/node-rtpmidi.git"
-    },
-	"optionalDependencies": {
-		"mdns2": "2.x"
-	},
-    "keywords": [
-        "midi",
-		"rtpmidi",
-		"coremidi",
-		"network",
-		"music"
-    ],
-    "license": "MIT",
-    "engines": {
-        "node": ">=0.4.0"
-    }
+  "name": "rtpmidi",
+  "version": "0.1.1",
+  "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
+  "description": "A RTP Midi server. Can be used to send midi messages through the network",
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/jdachtera/node-rtpmidi.git"
+  },
+  "optionalDependencies": {
+    "mdns2": "2.x",
+    "avahi_pub": "TheThingSystem/node_avahi_pub"
+  },
+  "keywords": [
+    "midi",
+    "rtpmidi",
+    "coremidi",
+    "network",
+    "music"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=0.4.0"
+  }
 }
