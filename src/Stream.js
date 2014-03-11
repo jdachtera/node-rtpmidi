@@ -31,6 +31,21 @@ function Stream(session) {
 
 util.inherits(Stream, EventEmitter);
 
+Stream.prototype.connect = function(rinfo) {
+  var counter = 0;
+  this.connectionInterval = setInterval(function () {
+    if (counter < 40 && this.ssrc === null) {
+      this.sendInvitation(rinfo);
+      counter++;
+    } else {
+      clearInterval(this.connectionInterval);
+      if (!this.ssrc) {
+        this.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
+      }
+    }
+  }.bind(this), 1500);
+};
+
 Stream.prototype.handleControlMessage = function handleControlMessage(message, rinfo) {
     var commandName = message.command;
     var handlerName = 'handle';
@@ -93,6 +108,12 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
     }
 };
 
+Stream.prototype.handleInvitation_rejected = function handleInvitation_accepted(message, rinfo) {
+  clearInterval(this.connectionInterval);
+  this.session.log('Invititation was rejected by ' + rinfo.address + ':' + rinfo.port);
+  this.session.removeStream(this);
+};
+
 Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
     if (this.rinfo1 === null) {
         this.rinfo1 = rinfo;
@@ -141,6 +162,7 @@ Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
 };
 
 Stream.prototype.sendInvitationAccepted = function sendInvitationAccepted(rinfo) {
+
     this.session.sendUdpMessage(rinfo, new ControlMessage().mixin({
         command: 'invitation_accepted',
         token: this.token,
@@ -218,7 +240,8 @@ Stream.prototype.sendMessage = function sendMessage(message, callback) {
 };
 
 Stream.prototype.end = function end(callback) {
-    clearInterval(this.syncInterval);
+  clearInterval(this.syncInterval);
+  clearInterval(this.connectionInterval);
 	if (this.isConnected) {
 		this.sendEndstream(function() {
 			this.emit('disconnected', {

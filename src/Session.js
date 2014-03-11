@@ -59,18 +59,26 @@ Session.prototype.start = function start() {
 Session.prototype.end = function(callback) {
 
 	var i = -1,
+    onClose = function () {
+      this.readyState--;
+      if (this.readyState <= 0) {
+        callback && callback();
+      }
+    }.bind(this),
 		next = function() {
 			i++;
 			var stream = this.streams[i];
 			if (stream) {
 				stream.end(next);
 			} else {
-				this.unpublish();
-				this.controlChannel.close();
-				this.messageChannel.close();
-				this.readyState = 0;
-				this.published = false;
-				callback && callback();
+        this.unpublish();
+
+        this.controlChannel.on('close', onClose);
+        this.messageChannel.on('close', onClose);
+
+        this.controlChannel.close();
+        this.messageChannel.close();
+        this.published = false;
 			}
 		}.bind(this);
 
@@ -130,6 +138,7 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
             return stream.ssrc == appleMidiMessage.ssrc || stream.token == appleMidiMessage.token;
         }).pop();
         this.emit('controlMessage', appleMidiMessage);
+
 
         if (!stream && appleMidiMessage.command == 'invitation') {
             stream = new Stream(this);
@@ -206,18 +215,7 @@ Session.prototype.connect = function connect(rinfo) {
     rinfo = {address: (this.ipVersion === 6 && rinfo.addressV6) ? rinfo.addressV6 : rinfo.address, port: rinfo.port};
 
     this.addStream(stream);
-    var counter = 0;
-    var connectionInterval = setInterval(function () {
-        if (counter < 40 && stream.ssrc === null) {
-            stream.sendInvitation(rinfo);
-            counter++;
-        } else {
-            clearInterval(connectionInterval);
-            if (!stream.ssrc) {
-                this.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
-            }
-        }
-    }.bind(this), 1500);
+    stream.connect(rinfo);
 };
 
 Session.prototype.streamConnected = function streamConnected(event) {
