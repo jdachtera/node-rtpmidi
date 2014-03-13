@@ -40,7 +40,7 @@ Stream.prototype.connect = function(rinfo) {
     } else {
       clearInterval(this.connectionInterval);
       if (!this.ssrc) {
-        this.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
+        this.session.log("Server at " + rinfo.address + ':' + rinfo.port + ' did not respond.');
       }
     }
   }.bind(this), 1500);
