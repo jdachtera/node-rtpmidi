@@ -111,7 +111,7 @@ MDnsService.prototype.unpublish = function(session) {
   var ad = advertisments[index];
 
   if (avahi_pub && avahi_pub.isSupported()) {
-    ad.stop();
+    ad.remove();
   } else if (mdns) {
     ad.stop();
   }
