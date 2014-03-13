@@ -8,6 +8,9 @@
     "type": "git",
     "url": "http://github.com/jdachtera/node-rtpmidi.git"
   },
+  "dependencies": {
+    "midi-common": "*"
+  },
   "optionalDependencies": {
     "mdns2": "2.x",
     "avahi_pub": "TheThingSystem/node_avahi_pub"

@@ -2,44 +2,7 @@
 
 var util = require("util"),
     RTPMessage = require("./RTPMessage"),
-    types_data_length = {
-
-        // Channel Messages
-        0x80: 2, // Note Off
-        0x90: 2, // Note On
-        0xa0: 2, // Polyphonic aftertouch
-        0xb0: 2, // Control/Mode Change
-        0xc0: 1, // Program Change
-        0xd0: 1, // Channel Aftertouch
-        0xe0: 2, // Pitch Wheel
-
-        // System Common Messages
-        /*
-        0xf0: SysEx Start, length is determined by SysEx end byte
-        */
-        0xf1: 1, // Quarter time
-        0xf2: 2, // Song Position Pointer
-        0xf3: 1, // Song select
-        /*
-        0xf4: Undefined
-        0xf5: Undefined
-        */
-        0xf6: 0, // Tune request (no data)
-        /*
-        0xf7: End of SysEx
-        */
-
-        // System Realtime Messages
-        0xf8: 0, // Timing clock
-        0xfa: 0, // Start
-        0xfb: 0, // Continue
-        0xfc: 0, // Stop
-        /*
-        0xfd: Undefined
-        */
-        0xfe: 0, // Active Sensing
-        0xff: 0  // System Reset
-    },
+    midiCommon = require("midi-common"),
     flags = {
         systemMessage: 0xf0,
         maskDeltaTimeByte: 0xef,
@@ -51,6 +14,11 @@ var util = require("util"),
         firstHasDeltaTime: 0x20,
         p: 0x10
     };
+
+function getDataLength(command) {
+  var type = (midiCommon.commands[command] || midiCommon.commands[command & 0xf0]);
+  return type ? type.dataLength : 0;
+}
 
 function MidiMessage() {
     RTPMessage.apply(this);
@@ -126,7 +94,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             data_length++;
 
         } else {
-            data_length = types_data_length[statusByte] || types_data_length[statusByte & 0xf0];
+            data_length = getDataLength(statusByte);
         }
         command.data = new Buffer(1 + data_length);
         command.data[0] = statusByte;
@@ -212,7 +180,8 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
         lastStatusByte,
         bitmask,
         d,
-        data_length;
+        data_length,
+        type;
 
     for (i = 0; i < this.commands.length; i++) {
         command = this.commands[i];
@@ -240,7 +209,7 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
             data_length++;
           }
         } else {
-          data_length = (types_data_length[statusByte & 0xf0] || 0);
+          data_length = getDataLength(statusByte);
         }
 
         if (data_length + 1 !== command.data.length) {
