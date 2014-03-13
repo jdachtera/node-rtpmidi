@@ -38,7 +38,7 @@ var util = require("util"),
         0xfd: Undefined
         */
         0xfe: 0, // Active Sensing
-        0xff: 0, // System Reset
+        0xff: 0  // System Reset
     },
     flags = {
         systemMessage: 0xf0,
@@ -147,7 +147,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 };
 
 MidiMessage.prototype.parseJournal = function(payload) {
-    var journal = journal = {};
+    var journal = {};
     var journalHeader = payload[0];
 
     journal.singlePacketLoss = !!(journalHeader & 0x80);
@@ -233,7 +233,15 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
             payload.push(0xef & d);
         }
         statusByte = command.data[0];
-        data_length = (types_data_length[statusByte & 0xf0] || 0);
+
+        if (statusByte === 0xf0) {
+          data_length = 0;
+          while (data_length + 1 < command.data.length && command.data[data_length] !== 0xf7) {
+            data_length++;
+          }
+        } else {
+          data_length = (types_data_length[statusByte & 0xf0] || 0);
+        }
 
         if (data_length + 1 !== command.data.length) {
             this.isValid = false;
