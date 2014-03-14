@@ -27,7 +27,7 @@ session.on('message', function(deltaTime, message) {
  
 input.on('message', function(deltaTime, message) {
   console.log('received a local message', message);
-  session.sendMessage(message);
+  session.sendMessage(deltaTime, message);
 });
 
 

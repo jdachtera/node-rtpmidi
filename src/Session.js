@@ -203,11 +203,15 @@ Session.prototype.flushQueue = function() {
   this.flushQueued = false;
 };
 
-Session.prototype.sendMessage = function sendMessage(command, deltaTime) {
+Session.prototype.sendMessage = function sendMessage(deltaTime, command) {
+    if (arguments.length == 1) {
+      deltaTime = 0;
+      command = arguments[0];
+    }
     if (!Buffer.isBuffer(command)) {
         command = new Buffer(command);
     }
-    this.queue.push({deltaTime: deltaTime || 0, data: command});
+    this.queue.push({deltaTime: deltaTime, data: command});
     this.queueFlush();
 };
 
