@@ -181,21 +181,14 @@ Session.prototype.sendUdpMessage = function sendMessage(rinfo, message, callback
     }
 };
 
-Session.prototype.sendMessages = function(messages) {
-    messages.forEach(function(message) {
-        this.queue.push({ deltaTime: 0, data: message });
-    }.bind(this));
-    if (this.bundle) {
-      this.queueFlush();
-    } else {
-      this.flushQueue();
-    }
-};
-
 Session.prototype.queueFlush = function() {
-  if (!this.flushQueued) {
-    this.flushQueued = true;
-    process.nextTick(this.flushQueue.bind(this));
+  if (this.bundle) {
+    if (!this.flushQueued) {
+      this.flushQueued = true;
+      process.nextTick(this.flushQueue.bind(this));
+    }
+  } else {
+    this.flushQueue();
   }
 };
 
@@ -210,11 +203,12 @@ Session.prototype.flushQueue = function() {
   this.flushQueued = false;
 };
 
-Session.prototype.sendMessage = function sendMessage(command) {
+Session.prototype.sendMessage = function sendMessage(command, deltaTime) {
     if (!Buffer.isBuffer(command)) {
         command = new Buffer(command);
     }
-    this.sendMessages([command]);
+    this.queue.push({deltaTime: deltaTime || 0, data: command});
+    this.queueFlush();
 };
 
 Session.prototype.connect = function connect(rinfo) {
