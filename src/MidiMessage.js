@@ -188,7 +188,6 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
 
     for (i = 0; i < this.commands.length; i++) {
         command = this.commands[i];
-      console.log(i, command.deltaTime);
         if (i == 0 && command.deltaTime === 0) {
             this.firstHasDeltaTime = false;
         } else {
@@ -243,7 +242,6 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
     payload.unshift(bitmask);
     this.payload = new Buffer(payload);
 
-    console.log(this)
     RTPMessage.prototype.generateBuffer.apply(this);
     return this;
 };
