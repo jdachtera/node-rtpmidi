@@ -214,7 +214,7 @@ Session.prototype.sendMessage = function sendMessage(command) {
     if (!Buffer.isBuffer(command)) {
         command = new Buffer(command);
     }
-    this.sendMessages([command], ssrc);    
+    this.sendMessages([command]);
 };
 
 Session.prototype.connect = function connect(rinfo) {
