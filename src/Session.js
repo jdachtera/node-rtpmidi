@@ -20,6 +20,9 @@ function Session(port, localName, bonjourName, ssrc, published, ipVersion) {
     this.published = !!published;
 
     this.debug = false;
+    this.bundle = true;
+    this.queue = [];
+    this.flushQueued = false;
 
     this.ipVersion = ipVersion === 6 ? 6 : 4;
 
@@ -178,31 +181,36 @@ Session.prototype.sendUdpMessage = function sendMessage(rinfo, message, callback
     }
 };
 
-Session.prototype.sendMessages = function(messages, ssrc) {
-    var commands = messages.map(function(message) {
-        return {deltaTime: 0, data: message};
-    });
-    if (ssrc) {
-        var stream = this.getStream(ssrc);
-        if (stream) {
-            stream.sendMessage({
-                commands: commands
-            });
-            return true;
-        }
-        return false;
+Session.prototype.sendMessages = function(messages) {
+    messages.forEach(function(message) {
+        this.queue.push({ deltaTime: 0, data: message });
+    }.bind(this));
+    if (this.bundle) {
+      this.queueFlush();
     } else {
-        var streams = this.getStreams();
-        for (var i = 0; i < streams.length; i++) {
-            streams[i].sendMessage({
-                commands: commands
-            });
-        }
-        return true;
+      this.flushQueue();
     }
 };
 
-Session.prototype.sendMessage = function sendMessage(command, ssrc) {
+Session.prototype.queueFlush = function() {
+  if (!this.flushQueued) {
+    this.flushQueued = true;
+    process.nextTick(this.flushQueue.bind(this));
+  }
+};
+
+Session.prototype.flushQueue = function() {
+  var streams = this.getStreams();
+  for (var i = 0; i < streams.length; i++) {
+    streams[i].sendMessage({
+      commands: this.queue
+    });
+  }
+  this.queue.length = 0;
+  this.flushQueued = false;
+};
+
+Session.prototype.sendMessage = function sendMessage(command) {
     if (!Buffer.isBuffer(command)) {
         command = new Buffer(command);
     }
