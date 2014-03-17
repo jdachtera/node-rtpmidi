@@ -74,6 +74,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
                     break;
                 }
             }
+            command.deltaTime /= 100;
         }
 
         statusByte = payload.readUInt8(offset);
@@ -183,12 +184,14 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
         data_length,
         type;
 
+    this.firstHasDeltaTime = true;
+
     for (i = 0; i < this.commands.length; i++) {
         command = this.commands[i];
         if (i == 0 && command.deltaTime === 0) {
             this.firstHasDeltaTime = false;
         } else {
-            d = command.deltaTime;
+            d = Math.round(command.deltaTime * 100);
 
             if (d >= 0x7fffff) {
                 payload.push((0x80 | d >> 21))
