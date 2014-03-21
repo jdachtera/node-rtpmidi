@@ -7,7 +7,7 @@ var rtpmidi = require('../index'),
   });
 
 // Enable some console output;
-//session.debug = true;
+//rtpmidi.log.level = 4;
 
 session.on('ready', function() {
   // Send a note

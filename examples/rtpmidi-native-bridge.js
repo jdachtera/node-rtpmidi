@@ -11,7 +11,7 @@ var rtpmidi = require('../index'),
     });
 
 // Enable some console output;
-session.debug = true;
+//rtpmidi.log.level = 4;
 
 // Create the virtual midi ports
 input.openVirtualPort("My Virtual Midi Input");

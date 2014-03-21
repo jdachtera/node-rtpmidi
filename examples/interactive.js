@@ -54,11 +54,7 @@ stdin.on('data', function (key) {
             session.sendMessage([144, 60, 127]);
             break;
           case 'd':
-            if (!session) {
-              main();
-              return w('Select a local session first');
-            }
-            session.debug = !session.debug;
+            rtpmidi.log.level = !rtpmidi.log.level;
             w("Debug mode is " + (session.debug ? "on" : "off") + ".");
             main();
             break;
