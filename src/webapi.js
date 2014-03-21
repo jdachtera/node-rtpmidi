@@ -33,10 +33,8 @@ module.exports = function(port) {
 		socket.on('removeSession', function(ssrc) {
 			var session = manager.getSessionBySsrc(ssrc);
 			if (session) {
-				console.log('removing session', ssrc, session);
 				manager.removeSession(session);
 			} else {
-				console.log('Session not found', ssrc, manager.getSessions().map(function(s) {return s.ssrc; }));
 			}
 		});
 

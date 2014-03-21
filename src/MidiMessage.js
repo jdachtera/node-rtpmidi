@@ -3,6 +3,8 @@
 var util = require("util"),
     RTPMessage = require("./RTPMessage"),
     midiCommon = require("midi-common"),
+    log = require('./log'),
+
     flags = {
         systemMessage: 0xf0,
         maskDeltaTimeByte: 0xef,
@@ -17,7 +19,7 @@ var util = require("util"),
 
 function getDataLength(command) {
   var type = (midiCommon.commands[command] || midiCommon.commands[command & 0xf0]);
-  return type ? type.dataLength : 0;
+  return type ? type.dataLength || 0 : 0;
 }
 
 function MidiMessage() {
@@ -35,6 +37,9 @@ util.inherits(MidiMessage, RTPMessage);
 
 MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     RTPMessage.prototype.parseBuffer.apply(this, arguments);
+
+
+
     var payload = this.payload,
         firstByte = payload.readUInt8(0),
         commandStartOffset,
@@ -52,7 +57,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     this.length = (firstByte & flags.maskLengthInFirstByte);
 
     if (this.bigLength) {
-        this.length = this.length << 8 + payload.readUInt8(1);
+        this.length = (this.length << 8) + payload.readUInt8(1);
     }
 
     // Read the command section
@@ -67,6 +72,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         if (this.commands.length || this.firstHasDeltaTime) {
             for (var k = 0; k < 3; k++) {
                 var currentOctet = payload.readUInt8(offset);
+
                 offset++;
                 command.deltaTime <<= 7;
                 command.deltaTime += currentOctet & flags.maskDeltaTimeByte;
@@ -89,9 +95,13 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         // Parse SysEx
         if (statusByte === 0xf0) {
             data_length = 0;
-            while (payload.length > offset + data_length && payload.readUInt8(offset + data_length) !== 0xf7) {
+            while (payload.length > offset + data_length && !(payload.readUInt8(offset + data_length) & 0x80)) {
                 data_length++;
             }
+            if (payload.readUInt8(offset + data_length) !== 0xf7) {
+              data_length--;
+            }
+
             data_length++;
 
         } else {
@@ -107,10 +117,10 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             payload.copy(command.data, 1, offset, offset + data_length);
             offset += data_length;
         }
-        this.commands.push(command);        
+        this.commands.push(command);
     }
-    if (this.hasJournal) {        
-        this.journal = this.parseJournal(this.payload.slice(offset));            
+    if (this.hasJournal) {
+        this.journal = this.parseJournal(this.payload.slice(offset));
     }
     return this;
 };
@@ -123,7 +133,7 @@ MidiMessage.prototype.parseJournal = function(payload) {
     journal.hasSystemJournal = !!(journalHeader & 0x40);
     journal.hasChannelJournal = !!(journalHeader & 0x20);
     journal.enhancedEncoding = !!(journalHeader & 0x10);
-    
+
     journal.checkPointPacketSequenceNumber = payload.readUInt16BE(1);
     journal.channelJournals = [];
 
@@ -171,80 +181,146 @@ MidiMessage.prototype.parseJournal = function(payload) {
         }
     }
     return journal;
-}
+};
 
 MidiMessage.prototype.generateBuffer = function generateBuffer() {
-    var payload = [],
-        i,
-        command,
-        statusByte,
-        lastStatusByte,
-        bitmask,
-        d,
-        data_length,
-        type;
+  var payload,
+    payloadLength = 1,
+    payloadOffset = 0,
+    i,
+    k,
 
-    this.firstHasDeltaTime = true;
+    command,
+    commandData,
+    commandDataLength,
+    commandDeltaTime,
+    commandStatusByte = null,
 
-    for (i = 0; i < this.commands.length; i++) {
-        command = this.commands[i];
-        if (i == 0 && command.deltaTime === 0) {
-            this.firstHasDeltaTime = false;
-        } else {
-            d = Math.round(command.deltaTime * 100);
+    expectedDataLength,
 
-            if (d >= 0x7fffff) {
-                payload.push((0x80 | d >> 21))
-            }
-            if (d >= 0x7fff) {
-                payload.push((0x80 | d >> 14))
-            }
-            if (d >= 0x7f) {
-                payload.push((0x80 | d >> 7))
-            }
-            payload.push(0xef & d);
-        }
-        statusByte = command.data[0];
+    lastStatusByte,
 
-        if (statusByte === 0xf0) {
-          data_length = 0;
-          while (data_length + 1 < command.data.length && command.data[data_length] !== 0xf7) {
-            data_length++;
-          }
-        } else {
-          data_length = getDataLength(statusByte);
-        }
+    length,
 
-        if (data_length + 1 !== command.data.length) {
-            this.isValid = false;
-            return this;
-        }
-        if (statusByte !== lastStatusByte) {
-            lastStatusByte = statusByte;
-            payload.push.apply(payload, command.data);
-        } else {
-            payload.push.apply(payload, command.data.slice(1));
-        }
+    bitmask;
+
+  this.firstHasDeltaTime = true;
+
+  for (i = 0; i < this.commands.length; i++) {
+    command = this.commands[i];
+    command._length = 0;
+    commandData = command.data;
+    commandDataLength = commandData.length;
+
+
+    if (i == 0 && command.deltaTime === 0) {
+      this.firstHasDeltaTime = false;
+    } else {
+      commandDeltaTime = Math.round(command.deltaTime * 100);
+
+      if (commandDeltaTime >= 0x7fffff) {
+        command._length++;
+      }
+      if (commandDeltaTime >= 0x7fff) {
+        command._length++;
+      }
+      if (commandDeltaTime >= 0x7f) {
+        command._length++;
+      }
+      command._length++;
+    }
+    commandStatusByte = command.data[0];
+
+    if (commandStatusByte === 0xf0) {
+      expectedDataLength = 0;
+      while (expectedDataLength + 1 < commandDataLength && command.data[expectedDataLength] !== 0xf7) {
+        expectedDataLength++;
+      }
+    } else {
+      expectedDataLength = getDataLength(commandStatusByte);
     }
 
-    this.bigLength = payload.length > 15;
+    if (expectedDataLength + 1 !== commandDataLength) {
+      command._length = 0;
+    } else {
+      command._length += expectedDataLength;
+      if (commandStatusByte !== lastStatusByte) {
+        command._hasOwnStatusByte =	true;
+        lastStatusByte = commandStatusByte;
+        command._length++
+      } else {
+        command._hasOwnStatusByte =	false;
+      }
+      payloadLength += command._length;
+    }
+  }
+  length = payloadLength - 1;
 
-    bitmask = 0;
-    bitmask |= this.bigLength ? (flags.bigLength | payload.length >> 8) : payload.length;
-    bitmask |= this.hasJournal ? flags.hasJournal : 0;
-    bitmask |= this.firstHasDeltaTime ? flags.firstHasDeltaTime : 0;
-    bitmask |= this.p ? flags.p : 0;
+  this.bigLength = length > 15;
 
-    if (this.bigLength) {
-        payload.unshift(0xff & payload.length, 1);
+  if (this.bigLength) {
+    payloadLength++;
+  }
+
+  payload = new Buffer(payloadLength);
+
+  bitmask = 0;
+  bitmask |= this.hasJournal ? flags.hasJournal : 0;
+  bitmask |= this.firstHasDeltaTime ? flags.firstHasDeltaTime : 0;
+  bitmask |= this.p ? flags.p : 0;
+
+  if (this.bigLength) {
+    bitmask |= flags.bigLength;
+    bitmask |= 0x0f & (length >> 8);
+    payload[1] = 0xff & (length);
+    payloadOffset++
+  } else {
+    bitmask |= 0x0f & (length);
+  }
+
+  payload[0] = bitmask;
+  payloadOffset++;
+
+  for (i = 0; i < this.commands.length; i++) {
+    command = this.commands[i];
+
+    if (command._length > 0) {
+      if (i > 0 || this.firstHasDeltaTime) {
+        commandDeltaTime = Math.round(command.deltaTime * 100);
+
+        if (commandDeltaTime >= 0x7fffff) {
+          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 21;
+        }
+        if (commandDeltaTime >= 0x7fff) {
+          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 14;
+        }
+        if (commandDeltaTime >= 0x7f) {
+          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 7;
+        }
+        payload[payloadOffset++] = 0xef & commandDeltaTime;
+      }
+
+      commandData = command.data;
+      commandDataLength = commandData.length;
+
+      k = command._hasOwnStatusByte ? 0 : 1;
+
+      while(k < commandDataLength) {
+        payload[payloadOffset++] = commandData[k];
+        k++;
+      }
+    } else {
+      log(3, 'Ignoring invalid command');
     }
 
-    payload.unshift(bitmask);
-    this.payload = new Buffer(payload);
 
-    RTPMessage.prototype.generateBuffer.apply(this);
-    return this;
+  }
+  this.payload = payload;
+
+  RTPMessage.prototype.generateBuffer.apply(this);
+  return this;
 };
+
 
 MidiMessage.prototype.toJSON = function() {
     return {

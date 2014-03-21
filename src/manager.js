@@ -7,6 +7,7 @@ var Session         = require('./Session'),
     assert          = require("assert"),
     sessions        = [],
     EventEmitter    = require("events").EventEmitter,
+    log             = require('./log'),
     inMemoryStore   = {},
     storageHandler,
     manager = module.exports = new EventEmitter();
@@ -54,7 +55,6 @@ function removeSession(session) {
 	if (session) {
 		session.end(function() {
 			sessions.splice(sessions.indexOf(session));
-			console.log(sessions);
 			manager.emit('sessionRemoved', {session: session});
 		}.bind(this));
 	}
@@ -94,7 +94,6 @@ function changeSession(config) {
 		if ((config.hasOwnProperty('activated') && config.activated !== (session.readyState === 2)) || restart) {
 			session.end(function() {
 				this.emit('sessionChanged', {session: session});
-				console.log(config, restart);
 				if (config.activated !== false || restart) {
 					session.on('ready', cb);
 					session.start();

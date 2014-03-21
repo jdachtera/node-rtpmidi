@@ -1,12 +1,13 @@
 "use strict";
 
-var util = require("util"),
-    EventEmitter = require("events").EventEmitter,
-    dgram = require("dgram"),
-    ControlMessage = require("./ControlMessage"),
-    MidiMessage = require("./MidiMessage"),
-    MdnsService = require("./mdns"),
-    Stream = require("./Stream");
+var util            = require("util"),
+    EventEmitter    = require("events").EventEmitter,
+    dgram           = require("dgram"),
+    ControlMessage  = require("./ControlMessage"),
+    MidiMessage     = require("./MidiMessage"),
+    MdnsService     = require("./mdns"),
+    log             = require('./log'),
+    Stream          = require("./Stream");
 
 
 function Session(port, localName, bonjourName, ssrc, published, ipVersion) {
@@ -19,15 +20,12 @@ function Session(port, localName, bonjourName, ssrc, published, ipVersion) {
     this.readyState = 0;
     this.published = !!published;
 
-    this.debug = false;
     this.bundle = true;
     this.queue = [];
     this.flushQueued = false;
+    this.lastFlush = 0;
 
     this.ipVersion = ipVersion === 6 ? 6 : 4;
-
-
-
 
     this.streamConnected = this.streamConnected.bind(this);
     this.streamDisconnected = this.streamDisconnected.bind(this);
@@ -119,12 +117,6 @@ Session.prototype.now = (function () {
 
 })();
 
-Session.prototype.log = function log() {
-    if (this.debug) {
-        console.log.apply(console, arguments);
-    }
-};
-
 Session.prototype.listening = function listening() {
     this.readyState++;
     if (this.readyState == 2) {
@@ -133,7 +125,7 @@ Session.prototype.listening = function listening() {
 };
 
 Session.prototype.handleMessage = function handleMessage(message, rinfo) {
-    this.log("Incoming Message = ", message);
+    log(4, "Incoming Message = ", message);
     var appleMidiMessage = new ControlMessage().parseBuffer(message),
         stream;
     if (appleMidiMessage.isValid) {
@@ -166,18 +158,13 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
 Session.prototype.sendUdpMessage = function sendMessage(rinfo, message, callback) {
     message.generateBuffer();
 
-    if (true || message instanceof MidiMessage) {
-        //console.log(message);
-    }
-
     if (message.isValid) {
-
         (rinfo.port % 2 == 0 ? this.controlChannel : this.messageChannel).send(message.buffer, 0, message.buffer.length, rinfo.port, rinfo.address, function () {
-          this.log("Outgoing Message = ", message.buffer, rinfo.port, rinfo.address);
+          log(4, "Outgoing Message = ", message.buffer, rinfo.port, rinfo.address);
           callback && callback();
         }.bind(this));
     } else {
-        this.log("Ignoring invalid message");
+        log(3, "Ignoring invalid message", message);
     }
 };
 
@@ -185,7 +172,7 @@ Session.prototype.queueFlush = function() {
   if (this.bundle) {
     if (!this.flushQueued) {
       this.flushQueued = true;
-      process.nextTick(this.flushQueue.bind(this));
+      setImmediate(this.flushQueue.bind(this));
     }
   } else {
     this.flushQueue();
@@ -193,26 +180,36 @@ Session.prototype.queueFlush = function() {
 };
 
 Session.prototype.flushQueue = function() {
-  var streams = this.getStreams();
-  for (var i = 0; i < streams.length; i++) {
-    streams[i].sendMessage({
-      commands: this.queue
-    });
-  }
+  var streams = this.getStreams(),
+    queue = this.queue.slice(0);
   this.queue.length = 0;
   this.flushQueued = false;
+
+  for (var i = 0; i < streams.length; i++) {
+    streams[i].sendMessage({
+      commands: queue
+    });
+  }
 };
 
 Session.prototype.sendMessage = function sendMessage(deltaTime, command) {
-    if (arguments.length == 1) {
-      deltaTime = 0;
-      command = arguments[0];
+  var now = this.now();
+
+  if (arguments.length === 1) {
+    deltaTime = 0;
+    if (this.lastFlush) {
+      deltaTime += (now - this.lastFlush) / 10000;
     }
-    if (!Buffer.isBuffer(command)) {
-        command = new Buffer(command);
-    }
-    this.queue.push({deltaTime: deltaTime, data: command});
-    this.queueFlush();
+    command = arguments[0];
+  }
+
+  this.lastFlush = now;
+
+  if (!Buffer.isBuffer(command)) {
+    command = new Buffer(command);
+  }
+  this.queue.push({deltaTime: deltaTime, data: command});
+  this.queueFlush();
 };
 
 Session.prototype.connect = function connect(rinfo) {
@@ -245,6 +242,7 @@ Session.prototype.addStream = function addStream(stream) {
 };
 
 Session.prototype.removeStream = function removeStream(stream) {
+
     stream.removeListener('connected', this.streamConnected);
     stream.removeListener('disconnected', this.streamDisconnected);
     stream.removeListener('message', this.deliverMessage);
