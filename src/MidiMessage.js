@@ -5,17 +5,18 @@ var util = require("util"),
     midiCommon = require("midi-common"),
     log = require('./log'),
 
-    flags = {
-        systemMessage: 0xf0,
-        maskDeltaTimeByte: 0xef,
-        maskLengthInFirstByte: 0x0f,
-        deltaTimeHasNext: 0x80,
-        commandStart: 0x80,
-        bigLength: 0x80,
-        hasJournal: 0x40,
-        firstHasDeltaTime: 0x20,
-        p: 0x10
-    };
+    flag_systemMessage = 0xf0,
+    flag_maskDeltaTimeByte = 0x7f,
+    flag_maskLengthInFirstByte = 0x0f,
+    flag_deltaTimeHasNext = 0x80,
+    flag_commandStart = 0x80,
+    flag_bigLength = 0x80,
+    flag_hasJournal = 0x40,
+    flag_firstHasDeltaTime = 0x20,
+    flag_p = 0x10,
+
+    deltaTimeFactor = 10000;
+
 
 function getDataLength(command) {
   var type = (midiCommon.commands[command] || midiCommon.commands[command & 0xf0]);
@@ -49,12 +50,12 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
         hasOwnStatusByte,
         data_length;
 
-    this.bigLength = !!(firstByte & flags.bigLength);
-    this.hasJournal = !!(firstByte & flags.hasJournal);
-    this.firstHasDeltaTime = !!(firstByte & flags.firstHasDeltaTime);
-    this.p = !!(firstByte & flags.p);
+    this.bigLength = !!(firstByte &  flag_bigLength);
+    this.hasJournal = !!(firstByte &  flag_hasJournal);
+    this.firstHasDeltaTime = !!(firstByte &  flag_firstHasDeltaTime);
+    this.p = !!(firstByte &  flag_p);
 
-    this.length = (firstByte & flags.maskLengthInFirstByte);
+    this.length = (firstByte &  flag_maskLengthInFirstByte);
 
     if (this.bigLength) {
         this.length = (this.length << 8) + payload.readUInt8(1);
@@ -65,23 +66,23 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     offset = commandStartOffset;
 
     while (offset < this.length + commandStartOffset - 1) {
-        var command = {
-            deltaTime: 0
-        };
+        var command = {},
+            deltaTime = 0;
+
         // Decode the delta time
         if (this.commands.length || this.firstHasDeltaTime) {
-            for (var k = 0; k < 3; k++) {
-                var currentOctet = payload.readUInt8(offset);
+            for (var k = 0; k < 4; k++) {
+              var currentOctet = payload.readUInt8(offset);
 
-                offset++;
-                command.deltaTime <<= 7;
-                command.deltaTime += currentOctet & flags.maskDeltaTimeByte;
-                if (!(currentOctet & flags.deltaTimeHasNext)) {
-                    break;
-                }
+              deltaTime <<= 7;
+              deltaTime |= currentOctet &  flag_maskDeltaTimeByte;
+              offset++;
+              if (!(currentOctet &  flag_deltaTimeHasNext)) {
+                break;
+              }
             }
-            command.deltaTime /= 100;
         }
+        command.deltaTime = deltaTime / deltaTimeFactor;
 
         statusByte = payload.readUInt8(offset);
         hasOwnStatusByte = (statusByte & 0x80) == 0x80;
@@ -216,12 +217,12 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
     if (i == 0 && command.deltaTime === 0) {
       this.firstHasDeltaTime = false;
     } else {
-      commandDeltaTime = Math.round(command.deltaTime * 100);
+      commandDeltaTime = Math.round(command.deltaTime * deltaTimeFactor);
 
-      if (commandDeltaTime >= 0x7fffff) {
+      if (commandDeltaTime >= 0x7f7f7f) {
         command._length++;
       }
-      if (commandDeltaTime >= 0x7fff) {
+      if (commandDeltaTime >= 0x7f7f) {
         command._length++;
       }
       if (commandDeltaTime >= 0x7f) {
@@ -265,12 +266,12 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
   payload = new Buffer(payloadLength);
 
   bitmask = 0;
-  bitmask |= this.hasJournal ? flags.hasJournal : 0;
-  bitmask |= this.firstHasDeltaTime ? flags.firstHasDeltaTime : 0;
-  bitmask |= this.p ? flags.p : 0;
+  bitmask |= this.hasJournal ?  flag_hasJournal : 0;
+  bitmask |= this.firstHasDeltaTime ?  flag_firstHasDeltaTime : 0;
+  bitmask |= this.p ?  flag_p : 0;
 
   if (this.bigLength) {
-    bitmask |= flags.bigLength;
+    bitmask |=  flag_bigLength;
     bitmask |= 0x0f & (length >> 8);
     payload[1] = 0xff & (length);
     payloadOffset++
@@ -286,18 +287,18 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
 
     if (command._length > 0) {
       if (i > 0 || this.firstHasDeltaTime) {
-        commandDeltaTime = Math.round(command.deltaTime * 100);
+        commandDeltaTime = Math.round(command.deltaTime * deltaTimeFactor);
 
-        if (commandDeltaTime >= 0x7fffff) {
-          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 21;
+        if (commandDeltaTime >= 0x7f7f7f) {
+          payload.writeUInt8(0x80 | (0x7f & (commandDeltaTime >> 21)), payloadOffset++);
         }
-        if (commandDeltaTime >= 0x7fff) {
-          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 14;
+        if (commandDeltaTime >= 0x7f7f) {
+          payload.writeUInt8(0x80 | (0x7f & (commandDeltaTime >> 14)), payloadOffset++);
         }
         if (commandDeltaTime >= 0x7f) {
-          payload[payloadOffset++] = 0x80 | commandDeltaTime >> 7;
+          payload.writeUInt8(0x80 | (0x7f & (commandDeltaTime >> 7)), payloadOffset++);
         }
-        payload[payloadOffset++] = 0xef & commandDeltaTime;
+        payload.writeUInt8(0x7f & commandDeltaTime, payloadOffset++);
       }
 
       commandData = command.data;
