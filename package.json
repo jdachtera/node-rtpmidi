@@ -1,6 +1,6 @@
 {
   "name": "rtpmidi",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Jascha Dachtera <jascha.dachtera@gmail.com>",
   "description": "A node js implementation of Apples Network Midi Protocol.",
   "main": "./index.js",
