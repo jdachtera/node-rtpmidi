@@ -197,10 +197,12 @@ Session.prototype.sendMessage = function sendMessage(deltaTime, command) {
 
   if (arguments.length === 1) {
     deltaTime = 0;
-    if (this.lastFlush) {
+    if (this.queue.length && this.lastFlush) {
       deltaTime += (now - this.lastFlush) / 10000;
     }
     command = arguments[0];
+  } else if (this.queue.length === 0) {
+    deltaTime -= now - this.lastFlush;
   }
 
   this.lastFlush = now;

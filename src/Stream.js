@@ -3,6 +3,7 @@
 var util = require("util"),
     EventEmitter = require('events').EventEmitter,
     ControlMessage = require("./ControlMessage.js"),
+    hrtimer = require('./hrtimer'),
     log = require('./log'),
     MidiMessage = require("./MidiMessage.js");
 
@@ -28,6 +29,7 @@ function Stream(session) {
     this.subscribers = [];
     this.isConnected = false;
     this.receiverFeedbackTimeout = null;
+    this.lastMessageTime = 0;
 }
 
 util.inherits(Stream, EventEmitter);
@@ -69,9 +71,20 @@ Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
 
     this.lastReceivedSequenceNumber = message.sequenceNumber;
 
+    var now = hrtimer.now();
 
     message.commands.forEach(function(command) {
+
+      this.lastMessageTime = this.lastMessageTime || now;
+      var comexTime = command.deltaTime - (now - this.lastMessageTime);
+      this.lastMessageTime = now + comexTime;
+
+      if (comexTime > 0) {
+        hrtimer.setTimeout(this.emit.bind(this, 'message', command.deltaTime, command.data), comexTime);
+      } else {
         this.emit('message', command.deltaTime, command.data);
+      }
+
     }.bind(this));
 
     clearTimeout(this.receiverFeedbackTimeout);

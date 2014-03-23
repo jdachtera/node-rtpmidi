@@ -17,5 +17,6 @@ module.exports = {
     RTPMessage:         require('./src/RTPMessage'),
     MTC:                require('./src/MTC'),
     MdnsService:        require('./src/mdns'),
-    log:                require('./src/log')
+    log:                require('./src/log'),
+    hrtimer:            require('./src/hrtimer')
 };
