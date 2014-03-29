@@ -13,9 +13,7 @@ var util = require("util"),
     flag_bigLength = 0x80,
     flag_hasJournal = 0x40,
     flag_firstHasDeltaTime = 0x20,
-    flag_p = 0x10,
-
-    deltaTimeFactor = 10000;
+    flag_p = 0x10;
 
 
 function getDataLength(command) {
@@ -82,7 +80,7 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
               }
             }
         }
-        command.deltaTime = deltaTime / deltaTimeFactor;
+        command.deltaTime = deltaTime;
 
         statusByte = payload.readUInt8(offset);
         hasOwnStatusByte = (statusByte & 0x80) == 0x80;
@@ -99,8 +97,8 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             while (payload.length > offset + data_length && !(payload.readUInt8(offset + data_length) & 0x80)) {
                 data_length++;
             }
-            if (payload.readUInt8(offset + data_length) !== 0xf7) {
-              data_length--;
+            if (payload.readUInt8(offset + data_length) !== 0xf7) {              
+              data_length--;              
             }
 
             data_length++;
@@ -118,39 +116,47 @@ MidiMessage.prototype.parseBuffer = function parseBuffer(buffer) {
             payload.copy(command.data, 1, offset, offset + data_length);
             offset += data_length;
         }
-        this.commands.push(command);
+        if (!(command.data[0] === 0xf0 && command.data[command.data.length - 1] !== 0xf7)) {
+          this.commands.push(command);
+        } else {          
+          return this;
+        }
+        
     }
     if (this.hasJournal) {
-        this.journal = this.parseJournal(this.payload.slice(offset));
+      this.journalOffset = offset;
+      this.journal = this.parseJournal();      
     }
     return this;
 };
 
-MidiMessage.prototype.parseJournal = function(payload) {
+MidiMessage.prototype.parseJournal = function() {
+    var offset = this.journalOffset, payload = this.payload, presentChapters;
+    
     var journal = {};
-    var journalHeader = payload[0];
+    var journalHeader = payload[offset];
 
     journal.singlePacketLoss = !!(journalHeader & 0x80);
     journal.hasSystemJournal = !!(journalHeader & 0x40);
     journal.hasChannelJournal = !!(journalHeader & 0x20);
     journal.enhancedEncoding = !!(journalHeader & 0x10);
 
-    journal.checkPointPacketSequenceNumber = payload.readUInt16BE(1);
+    journal.checkPointPacketSequenceNumber = payload.readUInt16BE(offset + 1);
     journal.channelJournals = [];
 
-    var journalOffset = 3;
+    offset += 3;
 
     if (journal.hasSystemJournal) {
         var systemJournal = journal.systemJournal =  {};
-        systemJournal.presentChapters = {};
-        systemJournal.presentChapters.S = !!(payload[journalOffset] & 0x80);
-        systemJournal.presentChapters.D = !!(payload[journalOffset] & 0x40);
-        systemJournal.presentChapters.V = !!(payload[journalOffset] & 0x20);
-        systemJournal.presentChapters.Q = !!(payload[journalOffset] & 0x10);
-        systemJournal.presentChapters.F = !!(payload[journalOffset] & 0x08);
-        systemJournal.presentChapters.X = !!(payload[journalOffset] & 0x04);
-        systemJournal.length = ((payload[journalOffset] & 0x3) << 8) | payload[journalOffset + 1];
-        journalOffset += systemJournal.length;
+        presentChapters = systemJournal.presentChapters = {};
+        presentChapters.S = !!(payload[offset] & 0x80);
+        presentChapters.D = !!(payload[offset] & 0x40);
+        presentChapters.V = !!(payload[offset] & 0x20);
+        presentChapters.Q = !!(payload[offset] & 0x10);
+        presentChapters.F = !!(payload[offset] & 0x08);
+        presentChapters.X = !!(payload[offset] & 0x04);
+        systemJournal.length = ((payload[offset] & 0x3) << 8) | payload[offset + 1];
+        offset += systemJournal.length;
     }
 
     if (journal.hasChannelJournal) {
@@ -158,23 +164,23 @@ MidiMessage.prototype.parseJournal = function(payload) {
             channelJournal;
 
         journal.totalChannels = (journalHeader & 0x0f) + 1;
-        while (channel < journal.totalChannels && journalOffset < payload.length) {
+        while (channel < journal.totalChannels && offset < payload.length) {
             channelJournal = {};
-            channelJournal.channel = (payload[journalOffset] >> 3) & 0x0f;
-            channelJournal.s = !!(payload[journalOffset] & 0x80);
-            channelJournal.h = !!(payload[journalOffset] & 0x01);
-            channelJournal.length = ((payload[journalOffset] & 0x3) << 8) | payload[journalOffset + 1];
-            channelJournal.presentChapters = {};
-            channelJournal.presentChapters.P = !!(payload[journalOffset + 2] & 0x80);
-            channelJournal.presentChapters.C = !!(payload[journalOffset + 2] & 0x40);
-            channelJournal.presentChapters.M = !!(payload[journalOffset + 2] & 0x20);
-            channelJournal.presentChapters.W = !!(payload[journalOffset + 2] & 0x10);
-            channelJournal.presentChapters.N = !!(payload[journalOffset + 2] & 0x08);
-            channelJournal.presentChapters.E = !!(payload[journalOffset + 2] & 0x04);
-            channelJournal.presentChapters.T = !!(payload[journalOffset + 2] & 0x02);
-            channelJournal.presentChapters.A = !!(payload[journalOffset + 2] & 0x01);
+            channelJournal.channel = (payload[offset] >> 3) & 0x0f;
+            channelJournal.s = !!(payload[offset] & 0x80);
+            channelJournal.h = !!(payload[offset] & 0x01);
+            channelJournal.length = ((payload[offset] & 0x3) << 8) | payload[offset + 1];
+            presentChapters = channelJournal.presentChapters = {};
+            presentChapters.P = !!(payload[offset + 2] & 0x80);
+            presentChapters.C = !!(payload[offset + 2] & 0x40);
+            presentChapters.M = !!(payload[offset + 2] & 0x20);
+            presentChapters.W = !!(payload[offset + 2] & 0x10);
+            presentChapters.N = !!(payload[offset + 2] & 0x08);
+            presentChapters.E = !!(payload[offset + 2] & 0x04);
+            presentChapters.T = !!(payload[offset + 2] & 0x02);
+            presentChapters.A = !!(payload[offset + 2] & 0x01);
 
-            journalOffset += channelJournal.length;
+            offset += channelJournal.length;
 
             journal.channelJournals.push(channelJournal);
 
@@ -217,7 +223,7 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
     if (i == 0 && command.deltaTime === 0) {
       this.firstHasDeltaTime = false;
     } else {
-      commandDeltaTime = Math.round(command.deltaTime * deltaTimeFactor);
+      commandDeltaTime = Math.round(command.deltaTime);
 
       if (commandDeltaTime >= 0x7f7f7f) {
         command._length++;
@@ -287,7 +293,7 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
 
     if (command._length > 0) {
       if (i > 0 || this.firstHasDeltaTime) {
-        commandDeltaTime = Math.round(command.deltaTime * deltaTimeFactor);
+        commandDeltaTime = Math.round(command.deltaTime);
 
         if (commandDeltaTime >= 0x7f7f7f) {
           payload.writeUInt8(0x80 | (0x7f & (commandDeltaTime >> 21)), payloadOffset++);

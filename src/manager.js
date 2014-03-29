@@ -47,7 +47,7 @@ function createSession(config, dontSave) {
     manager.emit('sessionAdded', {session: session});
 
     if (!dontSave) {
-        storageHandler({method: 'write', sessions: [session.toJSON()]}, function() {});
+        manager.saveSessions();
     }
     return session;
 }
@@ -190,30 +190,36 @@ manager.stopDiscovery = stopDiscovery;
 manager.stopDiscovery = stopDiscovery;
 manager.reset = reset;
 manager.getSessions = function() {
-    return sessions.slice();
+    return sessions;
 };
 manager.getRemoteSessions = function() {
-    return MdnsService.getRemoteSessions().slice(); //filter(isNotLocalSession);
+    return MdnsService.getRemoteSessions(); //filter(isNotLocalSession);
 };
 manager.storageHandler = function(handler) {
     storageHandler = handler;
 };
 manager.storageHandler(function(config, callback) {
-    switch(config.method) {
-        case 'read':
-            callback(null, JSON.parse(inMemoryStore['sessions'] || '[]'));
-            break;
-        case 'write':
-            inMemoryStore['sessions'] = JSON.stringify(config.sessions || []);
-            callback(null);
-            break;
-        default:
-            callback({message: 'Wrong method.'});
-    }
+  switch(config.method) {
+    case 'read':
+      callback(null, JSON.parse(inMemoryStore['sessions'] || '[]'));
+      break;
+    case 'write':
+      inMemoryStore['sessions'] = JSON.stringify(config.sessions || []);
+      callback(null);
+      break;
+    default:
+      callback({message: 'Wrong method.'});
+  }
 });
 
-storageHandler({method: 'read'}, function(err, sessionConfig) {
+manager.restoreSessions = function() {
+  storageHandler({method: 'read'}, function(err, sessionConfig) {
     sessionConfig.forEach(function(config) {
-        createSession(config, true);
+      createSession(config, true);
     });
-});
+  });
+};
+
+manager.saveSessions = function() {
+  storageHandler({method: 'write', sessions: sessions.map(function(s) { return s.toJSON(); })}, function() {});
+};

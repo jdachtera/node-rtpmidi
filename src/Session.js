@@ -24,12 +24,29 @@ function Session(port, localName, bonjourName, ssrc, published, ipVersion) {
     this.queue = [];
     this.flushQueued = false;
     this.lastFlush = 0;
+	this.lastMessageTime = 0;
 
     this.ipVersion = ipVersion === 6 ? 6 : 4;
 
     this.streamConnected = this.streamConnected.bind(this);
     this.streamDisconnected = this.streamDisconnected.bind(this);
     this.deliverMessage = this.deliverMessage.bind(this);
+	
+	this.controlChannel = dgram.createSocket("udp" + this.ipVersion);
+	this.controlChannel.on("message", this.handleMessage.bind(this));
+	this.controlChannel.on("listening", this.listening.bind(this));
+    this.controlChannel.on("error", this.emit.bind(this, 'error'));
+	this.messageChannel = dgram.createSocket("udp" + this.ipVersion);
+	this.messageChannel.on("message", this.handleMessage.bind(this));
+	this.messageChannel.on("listening", this.listening.bind(this));
+    this.messageChannel.on("error", this.emit.bind(this, 'error'));
+	
+	this.rate = 10000;
+		
+	this.startTime = Date.now() / 1000 * this.rate;
+	this.startTimeHr = process.hrtime();
+	
+	
 }
 
 util.inherits(Session, EventEmitter);
@@ -42,18 +59,11 @@ Session.prototype.start = function start() {
         }.bind(this));
       }
     }
-    try {
-		this.controlChannel = dgram.createSocket("udp" + this.ipVersion);
-		this.controlChannel.on("message", this.handleMessage.bind(this));
-		this.controlChannel.on("listening", this.listening.bind(this));
-		this.messageChannel = dgram.createSocket("udp" + this.ipVersion);
-		this.messageChannel.on("message", this.handleMessage.bind(this));
-		this.messageChannel.on("listening", this.listening.bind(this));
-        this.controlChannel.bind(this.port);
-        this.messageChannel.bind(this.port + 1);
-    } catch (e) {
-        this.emit('error', e);
-    }
+	
+	
+	
+    this.controlChannel.bind(this.port);
+    this.messageChannel.bind(this.port + 1);
 
 };
 
@@ -90,32 +100,10 @@ Session.prototype.end = function(callback) {
 	}
 };
 
-Session.prototype.now = (function () {
-  var rate = 10000,
-      maxValue = Math.pow(2, 32),
-      tickSource,
-      start
-    ;
-
-  if (process.hrtime) {
-    start = process.hrtime();
-    tickSource = function() {
-      var hrtime = process.hrtime(start);
-      return hrtime[0] + hrtime[1] / (1000 * 1000 * 1000);
-    }
-  } else {
-    start = Date.now();
-    tickSource = function() {
-      return (Date.now() - start) / 1000;
-    }
-  }
-
-  return function() {
-    var now = Math.round(tickSource() * rate);
-    return now % maxValue;
-  }
-
-})();
+Session.prototype.now = function() {
+	var hrtime = process.hrtime(this.startTimeHr);
+	return Math.round(((hrtime[0] + hrtime[1] / 1000 / 1000 / 1000)) * this.rate) % 0xffffffff;
+};
 
 Session.prototype.listening = function listening() {
     this.readyState++;
@@ -181,36 +169,49 @@ Session.prototype.queueFlush = function() {
 
 Session.prototype.flushQueue = function() {
   var streams = this.getStreams(),
-    queue = this.queue.slice(0);
-  this.queue.length = 0;
-  this.flushQueued = false;
+	queue = this.queue.slice(0),
+	now = this.now();
+	
+	this.queue.length = 0;
+	this.flushQueued = false;
 
-  for (var i = 0; i < streams.length; i++) {
-    streams[i].sendMessage({
+	queue.sort(function(a, b) {
+		return a.comexTime - b.comexTime;	
+	});
+	
+	var messageTime = queue[0].comexTime;
+	
+	if (messageTime > now) {
+		messageTime = now;
+	}
+
+	queue.forEach(function(message, i) {
+		message.deltaTime = message.comexTime - messageTime;
+	}.bind(this));
+	
+	var message = {
+	  timestamp: now,
       commands: queue
-    });
+    };
+		
+  for (var i = 0; i < streams.length; i++) {
+    streams[i].sendMessage(message);
   }
 };
 
-Session.prototype.sendMessage = function sendMessage(deltaTime, command) {
-  var now = this.now();
-
+Session.prototype.sendMessage = function sendMessage(comexTime, command) {
   if (arguments.length === 1) {
-    deltaTime = 0;
-    if (this.queue.length && this.lastFlush) {
-      deltaTime += (now - this.lastFlush) / 10000;
-    }
+    comexTime = this.now();
     command = arguments[0];
-  } else if (this.queue.length === 0) {
-    deltaTime -= now - this.lastFlush;
+  } else {
+	comexTime -= this.startTime
   }
-
-  this.lastFlush = now;
 
   if (!Buffer.isBuffer(command)) {
     command = new Buffer(command);
   }
-  this.queue.push({deltaTime: deltaTime, data: command});
+  
+  this.queue.push({comexTime: comexTime , data: command});
   this.queueFlush();
 };
 
@@ -251,8 +252,11 @@ Session.prototype.removeStream = function removeStream(stream) {
     this.streams.splice(this.streams.indexOf(stream));
 };
 
-Session.prototype.deliverMessage = function(deltaTime, message) {
-    this.emit('message', deltaTime, message);
+Session.prototype.deliverMessage = function(comexTime, message) {
+	this.lastMessageTime = this.lastMessageTime || comexTime;
+	var deltaTime = comexTime - this.lastMessageTime;
+	this.lastMessageTime = comexTime;
+    this.emit('message', deltaTime / this.rate, message, comexTime + this.startTime);
 };
 
 Session.prototype.getStreams = function getStreams() {
@@ -272,12 +276,10 @@ Session.prototype.getStream = function getStream(ssrc) {
 
 Session.prototype.publish = function() {
     MdnsService.publish(this);
-    this.published = true;
 };
 
 Session.prototype.unpublish = function() {
     MdnsService.unpublish(this);
-    this.published = false;
 };
 
 Session.prototype.toJSON = function(includeStreams) {
