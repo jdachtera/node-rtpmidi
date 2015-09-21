@@ -12,7 +12,7 @@
     "midi-common": "*"
   },
   "optionalDependencies": {
-    "mdns2": "2.x",
+    "mdns2": "2.2.10",
     "avahi_pub": "TheThingSystem/node_avahi_pub"
   },
   "keywords": [
