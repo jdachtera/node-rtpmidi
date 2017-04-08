@@ -11,7 +11,7 @@ var mdns = null,
   avahi_pub;
 
 try {
-  mdns = require('mdns2');
+  mdns = require('mdns');
 } catch (e) {
   console.log('mDNS discovery is not available.');
 }
