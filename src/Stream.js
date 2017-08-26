@@ -127,6 +127,9 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
         });
     } else if (this.rinfo2 === null) {
         log(1, "Data channel to " + this.name + " established");
+        this.emit('established', {
+            stream: this
+        });
         this.rinfo2 = rinfo;
         var count = 0;
         this.syncInterval = setInterval(function () {
