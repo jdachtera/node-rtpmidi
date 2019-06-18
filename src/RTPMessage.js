@@ -1,20 +1,21 @@
-"use strict";
+/* eslint-disable no-buffer-constructor */
+/* eslint-disable no-mixed-operators */
+/* eslint-disable no-bitwise */
+/* eslint-disable no-plusplus */
+const util = require('util');
 
-var util = require("util"),
-    assert = require('assert'),
-    AbstractMessage = require("./AbstractMessage");
+const AbstractMessage = require('./AbstractMessage');
 
 /**
- * This represents a RTP Protocol message.
- * @constructor
- */
+* This represents a RTP Protocol message.
+* @constructor
+*/
 function RTPMessage() {
-    AbstractMessage.apply(this);
-    this.csrcs = [];
+  AbstractMessage.apply(this);
+  this.csrcs = [];
 }
 
 util.inherits(RTPMessage, AbstractMessage);
-
 
 RTPMessage.prototype.version = 2;
 RTPMessage.prototype.padding = false;
@@ -28,104 +29,99 @@ RTPMessage.prototype.ssrc = 0;
 RTPMessage.prototype.payload = new Buffer(0);
 
 /**
- * Parses a Buffer into this RTPMessage object
- * @param {Buffer} The buffer containing a RTP AbstractMessage
- * @returns {Buffer} self
- */
-RTPMessage.prototype.parseBuffer = function parseBuffer(buffer) {
-    var firstByte,
-        secondByte,
-        currentOffset,
-        i;
+* Parses a Buffer into this RTPMessage object
+* @param {Buffer} The buffer containing a RTP AbstractMessage
+* @returns {Buffer} self
+*/
+RTPMessage.prototype.parseBuffer = function parseBuffer(buffer, ...args) {
+  AbstractMessage.prototype.parseBuffer.apply(this, args);
+  const firstByte = buffer.readUInt8(0);
+  let currentOffset;
+  let i;
 
-    AbstractMessage.prototype.parseBuffer.apply(this, arguments);
-    firstByte = buffer.readUInt8(0);
+  this.version = firstByte >>> 6;
+  this.padding = !!(firstByte >>> 5 & 1);
+  this.hasExtension = !!(firstByte >>> 4 & 1);
+  this.csrcCount = firstByte & 0xF;
 
-    this.version = firstByte >>> 6;
-    this.padding = !!(firstByte >>> 5 & 1);
-    this.hasExtension = !!(firstByte >>> 4 & 1);
-    this.csrcCount = firstByte & 0xF;
+  const secondByte = buffer.readUInt8(1);
+  this.marker = (secondByte & 0x80) === 0x80;
+  this.payloadType = secondByte & 0x7f;
 
-    secondByte = buffer.readUInt8(1);
-    this.marker = (secondByte & 0x80) == 0x80;
-    this.payloadType = secondByte & 0x7f;
+  this.sequenceNumber = buffer.readUInt16BE(2);
+  this.timestamp = buffer.readUInt32BE(4);
+  this.ssrc = buffer.readUInt32BE(8);
+  currentOffset = 12;
+  for (i = 0; i < this.csrcCount; i++) {
+    this.csrcs.push(buffer.readUInt32BE(currentOffset));
+    i++;
+  }
+  if (this.hasExtension) {
+    this.extensionHeaderId = buffer.readUInt16BE(currentOffset);
+    currentOffset += 2;
+    this.extensionHeaderLength = buffer.readUInt16BE(currentOffset);
+    currentOffset += 2;
+    this.extension = buffer.slice(currentOffset, currentOffset += this.extensionHeaderLength / 32);
+  }
+  this.payload = buffer.slice(currentOffset);
 
-    this.sequenceNumber = buffer.readUInt16BE(2);
-    this.timestamp = buffer.readUInt32BE(4);
-    this.ssrc = buffer.readUInt32BE(8);
-    currentOffset = 12;
-    for (i = 0; i < this.csrcCount; i++) {
-        this.csrcs.push(buffer.readUInt32BE(currentOffset));
-        i++;
-    }
-    if (this.hasExtension) {
-        this.extensionHeaderId = buffer.readUInt16BE(currentOffset);
-        currentOffset += 2;
-        this.extensionHeaderLength = buffer.readUInt16BE(currentOffset);
-        currentOffset += 2;
-        this.extension = buffer.slice(currentOffset, currentOffset += this.extensionHeaderLength / 32);
-    }
-    this.payload = buffer.slice(currentOffset);
-
-    return this;
+  return this;
 };
 
 /**
- * Generates the buffer of the message. It is then available as the .buffer property.
- * @returns {RTPMessage} self
- */
+* Generates the buffer of the message. It is then available as the .buffer property.
+* @returns {RTPMessage} self
+*/
 RTPMessage.prototype.generateBuffer = function generateBuffer() {
-    var bufferLength = 12,
-        payLoadOffset,
-        buffer,
-        firstByte,
-        secondByte,
-        i,
-        length;
+  let bufferLength = 12;
 
-    bufferLength += ((this.csrcs.length > 15 ? 15 : this.csrcs.length) * 15);
-    if (this.hasExtension) {
-        bufferLength += 4 * (this.extension.length + 1);
-    }
-    payLoadOffset = bufferLength;
-    if (Buffer.isBuffer(this.payload)) {
-        bufferLength += this.payload.length;
-    }
+  let i;
 
-    buffer = new Buffer(bufferLength);
+  let length;
 
-    firstByte = 0;
-    firstByte |= this.version << 6;
-    firstByte |= this.padding ? 0x20 : 0;
-    firstByte |= this.hasExtension ? 0x10 : 0;
-    firstByte |= (this.csrcs.length > 15 ? 15 : this.csrcs.length);
+  bufferLength += ((this.csrcs.length > 15 ? 15 : this.csrcs.length) * 15);
+  if (this.hasExtension) {
+    bufferLength += 4 * (this.extension.length + 1);
+  }
+  const payLoadOffset = bufferLength;
+  if (Buffer.isBuffer(this.payload)) {
+    bufferLength += this.payload.length;
+  }
 
-    secondByte = this.payloadType | (this.marker ? 0x80 : 0);
+  const buffer = new Buffer(bufferLength);
 
-    buffer.writeUInt8(firstByte, 0);
-    buffer.writeUInt8(secondByte, 1);
-    buffer.writeUInt16BE(this.sequenceNumber, 2);
-    buffer.writeUInt32BE(this.timestamp << 0, 4);
+  let firstByte = 0;
+  firstByte |= this.version << 6;
+  firstByte |= this.padding ? 0x20 : 0;
+  firstByte |= this.hasExtension ? 0x10 : 0;
+  firstByte |= (this.csrcs.length > 15 ? 15 : this.csrcs.length);
 
-    buffer.writeUInt32BE(this.ssrc, 8);
+  const secondByte = this.payloadType | (this.marker ? 0x80 : 0);
 
-    for (i = 0; i < this.csrcs && i < 15; i++) {
-        buffer.writeUInt32BE(this.csrcs[i], 12 + (4 * i));
-    }
+  buffer.writeUInt8(firstByte, 0);
+  buffer.writeUInt8(secondByte, 1);
+  buffer.writeUInt16BE(this.sequenceNumber, 2);
+  buffer.writeUInt32BE(this.timestamp << 0, 4);
 
-    if (this.hasExtension) {
-        length = Math.ceil(this.extension.length / 32);
-        buffer.writeUInt16BE(this.extensionHeaderId, 12 + (4 * i));
-        buffer.writeUInt16BE(length, 14 + (4 * i));
-        this.extension.copy(buffer, 16 + (4 * i));
-    }
+  buffer.writeUInt32BE(this.ssrc, 8);
 
-    if (Buffer.isBuffer(this.payload)) {
-        this.payload.copy(buffer, payLoadOffset);
-    }
+  for (i = 0; i < this.csrcs && i < 15; i++) {
+    buffer.writeUInt32BE(this.csrcs[i], 12 + (4 * i));
+  }
 
-    this.buffer = buffer;
-    return this;
+  if (this.hasExtension) {
+    length = Math.ceil(this.extension.length / 32);
+    buffer.writeUInt16BE(this.extensionHeaderId, 12 + (4 * i));
+    buffer.writeUInt16BE(length, 14 + (4 * i));
+    this.extension.copy(buffer, 16 + (4 * i));
+  }
+
+  if (Buffer.isBuffer(this.payload)) {
+    this.payload.copy(buffer, payLoadOffset);
+  }
+
+  this.buffer = buffer;
+  return this;
 };
 
 module.exports = RTPMessage;

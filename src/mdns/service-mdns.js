@@ -1,14 +1,22 @@
-'use strict';
 
-var mdns = null,
-  util = require('util'),
-  EventEmitter = require('events').EventEmitter,
-  service_id = '_apple-midi._udp',
-  publishedSessions = [],
-  advertisments = [],
-  remoteSessions = {},
-  browser = null,
-  avahi_pub;
+
+let mdns = null;
+
+const util = require('util');
+
+const { EventEmitter } = require('events');
+
+const service_id = '_apple-midi._udp';
+
+const publishedSessions = [];
+
+const advertisments = [];
+
+let remoteSessions = {};
+
+let browser = null;
+
+let avahi_pub;
 
 try {
   mdns = require('mdns');
@@ -18,17 +26,15 @@ try {
 
 try {
   avahi_pub = require('avahi_pub');
-} catch(e) {}
-
-
+} catch (e) {}
 
 function sessionDetails(session) {
-  var addressV4 = null,
-    addressV6 = null;
+  let addressV4 = null;
+
+  let addressV6 = null;
 
   if (session.addresses) {
-    session.addresses.forEach(function(address) {
-
+    session.addresses.forEach((address) => {
       if (address.search(/\./) > -1 && !addressV4) {
         addressV4 = address;
       } else if (address.search(':') > -1 && !addressV6) {
@@ -41,31 +47,28 @@ function sessionDetails(session) {
     name: session.name,
     port: session.port,
     address: addressV4,
-    addressV6: addressV6,
-    host: session.host
+    addressV6,
+    host: session.host,
   };
 }
-var details = {};
+const details = {};
 
 function MDnsService() {
   if (mdns) {
     browser = mdns.createBrowser(service_id);
-    browser.on('serviceUp', function (service) {
+    browser.on('serviceUp', (service) => {
       remoteSessions[service.name] = service;
       details[service.name] = sessionDetails(service);
       updateRemoteSessions();
       this.emit('remoteSessionUp', details[service.name]);
-    }.bind(this));
-    browser.on('serviceDown', function (service) {
-      var d = details[service.name];
-      delete(remoteSessions[service.name]);
-      delete(details[service.name]);
+    });
+    browser.on('serviceDown', (service) => {
+      const d = details[service.name];
+      delete (remoteSessions[service.name]);
+      delete (details[service.name]);
       updateRemoteSessions();
       this.emit('remoteSessionDown', d);
-
-    
-    }.bind(this));
-
+    });
   }
 }
 
@@ -76,17 +79,17 @@ MDnsService.prototype.start = function () {
   if (mdns) {
     browser.start();
   } else {
-    console.log('mDNS discovery is not available.')
+    console.log('mDNS discovery is not available.');
   }
 };
 
-MDnsService.prototype.stop = function() {
+MDnsService.prototype.stop = function () {
   if (mdns && browser) {
     browser.stop();
   }
 };
 
-MDnsService.prototype.publish = function(session) {
+MDnsService.prototype.publish = function (session) {
   if (publishedSessions.indexOf(session) !== -1) {
     return;
   }
@@ -96,26 +99,24 @@ MDnsService.prototype.publish = function(session) {
     var ad = avahi_pub.publish({
       name: session.bonjourName,
       type: service_id,
-      port: session.port
+      port: session.port,
     });
     advertisments.push(ad);
-
   } else if (mdns) {
     var ad = mdns.createAdvertisement(service_id, session.port, {
-      name: session.bonjourName
+      name: session.bonjourName,
     });
     advertisments.push(ad);
     ad.start();
   }
-
 };
 
-MDnsService.prototype.unpublish = function(session) {
-  var index = publishedSessions.indexOf(session);
+MDnsService.prototype.unpublish = function (session) {
+  const index = publishedSessions.indexOf(session);
   if (index === -1) {
     return;
   }
-  var ad = advertisments[index];
+  const ad = advertisments[index];
 
   if (avahi_pub && avahi_pub.isSupported()) {
     ad.remove();
@@ -127,18 +128,18 @@ MDnsService.prototype.unpublish = function(session) {
   advertisments.splice(index);
 };
 
-var sessions = [];
+const sessions = [];
 
 function updateRemoteSessions() {
   sessions.length = 0;
-  for (var name in details) {
+  for (const name in details) {
     if (details.hasOwnProperty(name)) {
       sessions.push(details[name]);
     }
   }
-};
+}
 
-MDnsService.prototype.getRemoteSessions = function() {
+MDnsService.prototype.getRemoteSessions = function () {
   return sessions;
 };
 
