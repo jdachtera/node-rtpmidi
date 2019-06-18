@@ -149,17 +149,21 @@ Session.prototype.sendUdpMessage = function sendMessage(rinfo, message, callback
   message.generateBuffer();
 
   if (message.isValid) {
-    (rinfo.port % 2 === 0 ? this.controlChannel
-      : this.messageChannel
-    ).send(
-      message.buffer, 0,
-      message.buffer.length,
-      rinfo.port, rinfo.address,
-      () => {
-        log(4, 'Outgoing Message = ', message.buffer, rinfo.port, rinfo.address);
-        callback && callback();
-      },
-    );
+    try {
+      (rinfo.port % 2 === 0 ? this.controlChannel
+        : this.messageChannel
+      ).send(
+        message.buffer, 0,
+        message.buffer.length,
+        rinfo.port, rinfo.address,
+        () => {
+          log(4, 'Outgoing Message = ', message.buffer, rinfo.port, rinfo.address);
+          callback && callback();
+        },
+      );   
+    } catch (error) {
+      console.error(error);
+    }
   } else {
     log(3, 'Ignoring invalid message', message);
   }
