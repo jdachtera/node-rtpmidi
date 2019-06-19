@@ -232,7 +232,7 @@ Session.prototype.connect = function connect(rinfo) {
   const stream = new Stream(this);
 
   rinfo = {
-    address: (this.ipVersion === 6 && rinfo.addressV6) ? rinfo.addressV6+
+    address: (this.ipVersion === 6 && rinfo.addressV6) ? rinfo.addressV6
       : rinfo.address,
     port: rinfo.port,
   };
