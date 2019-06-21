@@ -1,8 +1,10 @@
+/* eslint-disable no-restricted-syntax */
 // A Protocol message interface
 function AbstractMessage() {}
 
 AbstractMessage.prototype.mixin = function copyFrom(data) {
-  for (var k in data) {
+  for (const k in data) {
+    // eslint-disable-next-line no-prototype-builtins
     if (data.hasOwnProperty(k)) {
       this[k] = data[k];
     }
@@ -20,6 +22,6 @@ AbstractMessage.prototype.generateBuffer = function generateBuffer() {
 };
 AbstractMessage.prototype.isMessage = true;
 AbstractMessage.prototype.isValid = true;
-AbstractMessage.prototype.buffer = new Buffer(0);
+AbstractMessage.prototype.buffer = Buffer.alloc(0);
 
 module.exports = AbstractMessage;
