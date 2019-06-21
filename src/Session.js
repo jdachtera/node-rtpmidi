@@ -112,14 +112,14 @@ Session.prototype.handleMessage = function handleMessage(message, rinfo) {
   const appleMidiMessage = new ControlMessage().parseBuffer(message);
   let stream;
   if (appleMidiMessage.isValid) {
-    stream = this.streams.filter((streamItem) => {
-      return (streamItem.ssrc === appleMidiMessage.ssrc)
-        || (streamItem.token === appleMidiMessage.token);
-    }).pop();
+    stream = this.streams.filter(
+      streamItem => (streamItem.ssrc === appleMidiMessage.ssrc)
+        || (streamItem.token === appleMidiMessage.token),
+    ).pop();
     this.emit('controlMessage', appleMidiMessage);
 
 
-    if (!stream && appleMidiMessage.command == 'invitation') {
+    if (!stream && appleMidiMessage.command === 'invitation') {
       stream = new Stream(this);
       stream.handleControlMessage(appleMidiMessage, rinfo);
       this.addStream(stream);
@@ -182,9 +182,7 @@ Session.prototype.flushQueue = function flushQueue() {
   this.queue.length = 0;
   this.flushQueued = false;
 
-  queue.sort((a, b) => {
-    return a.comexTime - b.comexTime;
-  });
+  queue.sort((a, b) => (a.comexTime - b.comexTime));
 
   let messageTime = queue[0].comexTime;
 
@@ -272,9 +270,7 @@ Session.prototype.deliverMessage = function deliverMessage(comexTime, message) {
 };
 
 Session.prototype.getStreams = function getStreams() {
-  return this.streams.filter((item) => {
-    return item.isConnected;
-  });
+  return this.streams.filter(item => item.isConnected);
 };
 
 Session.prototype.getStream = function getStream(ssrc) {

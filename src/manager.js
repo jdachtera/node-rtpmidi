@@ -7,7 +7,6 @@ os              = require("os"),
 assert          = require("assert"),
 sessions        = [],
 EventEmitter    = require("events").EventEmitter,
-log             = require('./log'),
 inMemoryStore   = {},
 storageHandler,
 manager = module.exports = new EventEmitter();

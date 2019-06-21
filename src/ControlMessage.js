@@ -1,6 +1,4 @@
-"use strict";
-
-var util = require("util"),
+const util = require("util");
 assert = require('assert'),
 AbstractMessage = require("./AbstractMessage"),
 byteToCommand = {
