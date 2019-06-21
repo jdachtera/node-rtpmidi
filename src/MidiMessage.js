@@ -6,7 +6,7 @@
 const util = require('util');
 const midiCommon = require('midi-common');
 
-const log = require('./log');
+const logger = require('./logger');
 const RTPMessage = require('./RTPMessage');
 
 const flag_maskDeltaTimeByte = 0x7f;
@@ -319,7 +319,7 @@ MidiMessage.prototype.generateBuffer = function generateBuffer() {
         k += 1;
       }
     } else {
-      log(3, 'Ignoring invalid command');
+      logger.warn('Ignoring invalid command');
     }
   }
 

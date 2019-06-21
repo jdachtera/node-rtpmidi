@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../logger');
+
 var mdns = null,
 util = require('util'),
 EventEmitter = require('events').EventEmitter,
@@ -13,13 +15,13 @@ avahi_pub;
 try {
   mdns = require('mdns');
 } catch (e) {
-  console.error('mDNS discovery is not available.', e.message);
+  logger.error('mDNS discovery is not available.', e.message);
 }
 
 try {
   avahi_pub = require('avahi_pub');
 } catch(e) {
-  console.error('avahi_pub is not available.', e.message);
+  logger.error('avahi_pub is not available.', e.message);
 }
 
 
@@ -78,7 +80,7 @@ MDnsService.prototype.start = function () {
   if (mdns) {
     browser.start();
   } else {
-    console.log('mDNS discovery is not available.')
+    logger.log('mDNS discovery is not available.')
   }
 };
 

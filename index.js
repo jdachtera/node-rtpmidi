@@ -8,5 +8,5 @@ module.exports = {
   RTPMessage: require('./src/RTPMessage'),
   MTC: require('./src/MTC'),
   MdnsService: require('./src/mdns'),
-  log: require('./src/log'),
+  logger: require('./src/logger'),
 };

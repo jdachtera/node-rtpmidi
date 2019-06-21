@@ -2,7 +2,7 @@ const util = require('util');
 const { EventEmitter } = require('events');
 
 const ControlMessage = require('./ControlMessage.js');
-const log = require('./log');
+const logger = require('./logger');
 const MidiMessage = require('./MidiMessage.js');
 
 /**
@@ -69,7 +69,7 @@ Stream.prototype.connect = function connect(rinfo) {
       clearInterval(this.connectionInterval);
       if (!this.ssrc) {
         const { address, port } = rinfo;
-        log(2, `Server at ${address}:${port} did not respond.`);
+        logger.warn(`Server at ${address}:${port} did not respond.`);
       }
     }
   }, 1500);
@@ -111,7 +111,7 @@ Stream.prototype.handleMidiMessage = function handleMidiMessage(message) {
 // eslint-disable-next-line camelcase
 Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(message, rinfo) {
   if (this.rinfo1 === null) {
-    log(1, `Invitation accepted by ${message.name}`);
+    logger.info(`Invitation accepted by ${message.name}`);
     this.name = message.name;
     this.ssrc = message.ssrc;
     this.rinfo1 = rinfo;
@@ -124,7 +124,7 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
       stream: this,
     });
   } else if (this.rinfo2 === null) {
-    log(1, `Data channel to ${this.name} established`);
+    logger.info(`Data channel to ${this.name} established`);
     this.emit('established', {
       stream: this,
     });
@@ -146,7 +146,7 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
 // eslint-disable-next-line camelcase
 Stream.prototype.handleInvitation_rejected = function handleInvitation_accepted(message, rinfo) {
   clearInterval(this.connectionInterval);
-  log(1, `Invititation was rejected by ${rinfo.address}:${rinfo.port}  ${message}`);
+  logger.info(`Invititation was rejected by ${rinfo.address}:${rinfo.port}  ${message}`);
   this.session.removeStream(this);
 };
 
@@ -156,10 +156,10 @@ Stream.prototype.handleInvitation = function handleInvitation(message, rinfo) {
     this.token = message.token;
     this.name = message.name;
     this.ssrc = message.ssrc;
-    log(1, `Got invitation from ${message.name} on channel 1`);
+    logger.info(`Got invitation from ${message.name} on channel 1`);
   } else if (this.rinfo2 == null) {
     this.rinfo2 = rinfo;
-    log(1, `Got invitation from ${message.name} on channel 2`);
+    logger.info(`Got invitation from ${message.name} on channel 2`);
     this.isConnected = true;
     this.emit('connected', {
       stream: this,
@@ -173,7 +173,7 @@ Stream.prototype.handleSynchronization = function handleSynchronization(message)
 };
 
 Stream.prototype.handleEnd = function handleEndstream() {
-  log(1, `${this.name} ended the stream`);
+  logger.info(`${this.name} ended the stream`);
   clearInterval(this.syncInterval);
   this.isConnected = false;
   this.emit('disconnected', {
@@ -183,7 +183,7 @@ Stream.prototype.handleEnd = function handleEndstream() {
 
 // eslint-disable-next-line camelcase
 Stream.prototype.handleReceiver_feedback = function handleReceiver_feedback(message) {
-  log(4, `Got receiver feedback SRRC ${message.ssrc} is at ${message.sequenceNumber}. Current is ${this.lastSentSequenceNr}`);
+  logger.info(`Got receiver feedback SRRC ${message.ssrc} is at ${message.sequenceNumber}. Current is ${this.lastSentSequenceNr}`);
 };
 
 Stream.prototype.sendInvitation = function sendInvitation(rinfo) {
@@ -271,47 +271,45 @@ Stream.prototype.sendSynchronization = function sendSynchronization(incomingSync
 };
 
 Stream.prototype.logSynchronization = function logSynchronization(incomingSyncMessage, answer) {
-  if (log.shouldLog(3)) {
-    const count = incomingSyncMessage ? incomingSyncMessage.count : -1;
+  const count = incomingSyncMessage ? incomingSyncMessage.count : -1;
 
-    if (count === 0 || count === -1) {
-      log(
-        2, '\n', 'T', 'C', 'Timestamp 1         ', 'Timestamp 2         ',
-        'Timestamp 3         ', 'Latency   ', ' Time difference     ', 'Rate ',
-      );
-    }
-    if (incomingSyncMessage) {
-      log(
-        2, 'I', incomingSyncMessage.count,
-        pad(readUInt64BE(incomingSyncMessage.timestamp1), 20),
-        pad(readUInt64BE(incomingSyncMessage.timestamp2), 20),
-        pad(readUInt64BE(incomingSyncMessage.timestamp3), 20),
-        pad(this.latency, 10),
-        (this.timeDifference < 0 ? '-' : ' ') + pad(Math.abs(this.timeDifference), 20),
-        this.session.rate,
-      );
-    }
-    if (answer.count < 3) {
-      log(
-        2, 'O', answer.count,
-        pad(readUInt64BE(answer.timestamp1), 20),
-        pad(readUInt64BE(answer.timestamp2), 20),
-        pad(readUInt64BE(answer.timestamp3), 20),
-        pad(this.latency, 10),
-        (this.timeDifference < 0 ? '-' : ' ') + pad(Math.abs(this.timeDifference), 20),
-        this.session.rate,
-      );
-    }
-    if (this.timeDifference) {
-      const d = new Date();
-      d.setTime(this.timeDifference / 10);
-    }
+  if (count === 0 || count === -1) {
+    logger.verbose(
+      '\n', 'T', 'C', 'Timestamp 1         ', 'Timestamp 2         ',
+      'Timestamp 3         ', 'Latency   ', ' Time difference     ', 'Rate ',
+    );
+  }
+  if (incomingSyncMessage) {
+    logger.verbose(
+      'I', incomingSyncMessage.count,
+      pad(readUInt64BE(incomingSyncMessage.timestamp1), 20),
+      pad(readUInt64BE(incomingSyncMessage.timestamp2), 20),
+      pad(readUInt64BE(incomingSyncMessage.timestamp3), 20),
+      pad(this.latency, 10),
+      (this.timeDifference < 0 ? '-' : ' ') + pad(Math.abs(this.timeDifference), 20),
+      this.session.rate,
+    );
+  }
+  if (answer.count < 3) {
+    logger.verbose(
+      'O', answer.count,
+      pad(readUInt64BE(answer.timestamp1), 20),
+      pad(readUInt64BE(answer.timestamp2), 20),
+      pad(readUInt64BE(answer.timestamp3), 20),
+      pad(this.latency, 10),
+      (this.timeDifference < 0 ? '-' : ' ') + pad(Math.abs(this.timeDifference), 20),
+      this.session.rate,
+    );
+  }
+  if (this.timeDifference) {
+    const d = new Date();
+    d.setTime(this.timeDifference / 10);
   }
 };
 
 Stream.prototype.sendReceiverFeedback = function sendReceiverFeedback(callback) {
   if (this.lostSequenceNumbers.length) {
-    log(2, 'Lost packages: ', this.lostSequenceNumbers);
+    logger.warn(`Lost packages: ${this.lostSequenceNumbers}`);
   }
   this.session.sendUdpMessage(this.rinfo1, new ControlMessage().mixin({
     command: 'receiver_feedback',
