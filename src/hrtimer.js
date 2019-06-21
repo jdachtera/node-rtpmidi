@@ -1,12 +1,14 @@
-const cbs = [];
-let running = false;
+
+var cbs = [],
+    running = false;
 
 function timeout(cb, ms) {
   if (ms) {
-    const messageTime = arguments[1] += now();
+    var messageTime = arguments[1] += now();
+
 
     if (cbs.length) {
-      for (let i = 0; i < cbs.length; i++) {
+      for (var i = 0; i < cbs.length; i++) {
         if (cbs[i]['1'] <= messageTime) {
           cbs.splice(i + 1, 0, arguments);
           break;
@@ -28,13 +30,13 @@ function timeout(cb, ms) {
 }
 
 function now() {
-  const hr = process.hrtime();
+  var hr = process.hrtime();
   return (hr[0] * 1000) + (hr[1] / 1000 / 1000);
 }
 
 function run() {
-  const n = now();
-  for (let i = 0; i < cbs.length; i++) {
+  var n = now();
+  for (var i = 0; i < cbs.length; i++) {
     if (cbs[i]['1'] <= n) {
       cbs[i]['0']();
       cbs.splice(i, 1);
@@ -51,7 +53,7 @@ function run() {
 }
 
 function clear(cb) {
-  for (let i = 0; i < cbs.length; i++) {
+  for (var i = 0; i < cbs.length; i++) {
     if (cbs[i][0] === cb) {
       cbs.splice(i, 1);
       break;
@@ -85,6 +87,7 @@ test(setTimeout, i, function(result1) {
   })
 });
 */
+
 
 exports.setTimeout = timeout;
 exports.clearTimeout = clear;
