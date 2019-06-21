@@ -1,12 +1,12 @@
 
 var cbs = [],
-    running = false;
+running = false;
 
 function timeout(cb, ms) {
   if (ms) {
     var messageTime = arguments[1] += now();
-
-
+    
+    
     if (cbs.length) {
       for (var i = 0; i < cbs.length; i++) {
         if (cbs[i]['1'] <= messageTime) {
@@ -17,7 +17,7 @@ function timeout(cb, ms) {
     } else {
       cbs.push(arguments);
     }
-
+    
     if (!running) {
       running = true;
       setImmediate(run);
@@ -25,7 +25,7 @@ function timeout(cb, ms) {
   } else {
     cb();
   }
-
+  
   return cb;
 }
 
@@ -68,14 +68,14 @@ function test(impl, i, cb) {
     var nnn = nn-n;
     a += (nnn);
     n = nn;
-
+    
     if (c < m) {
       c++;
       impl(l, i);
     } else {
       cb(a/c);
     }
-
+    
   }
   l();
 }

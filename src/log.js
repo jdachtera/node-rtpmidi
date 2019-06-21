@@ -9,5 +9,3 @@ var shouldLog = module.exports.shouldLog = function(level) {
 }
 
 log.level = 1;
-
-
