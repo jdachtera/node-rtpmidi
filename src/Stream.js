@@ -5,7 +5,7 @@ const ControlMessage = require('./ControlMessage.js');
 const log = require('./log');
 const MidiMessage = require('./MidiMessage.js');
 
-/** 
+/**
  * Helper functions
  * */
 function generateRandomInteger(octets) {
@@ -21,13 +21,12 @@ function pad(number, length) {
 }
 
 function writeUInt64BE(buffer, value) {
-  const str = pad((value).toString(16), 16);	
+  const str = pad((value).toString(16), 16);
   buffer.writeUInt32BE(0, 0);
   buffer.writeUInt32BE(parseInt(str.slice(8), 16), 4);
 }
 
-function readUInt64BE(buffer, i) {
-  i = i || 0;
+function readUInt64BE(buffer, i = 0) {
   return buffer.readUInt32BE(i + 4);
 }
 
@@ -118,7 +117,7 @@ Stream.prototype.handleInvitation_accepted = function handleInvitation_accepted(
     this.rinfo1 = rinfo;
     this.sendInvitation({
       address: rinfo.address,
-      port: rinfo.port + 1
+      port: rinfo.port + 1,
     });
     this.isConnected = true;
     this.emit('connected', {
@@ -219,7 +218,7 @@ Stream.prototype.sendEndstream = function sendEndstream(callback) {
 
 Stream.prototype.sendSynchronization = function sendSynchronization(incomingSyncMessage) {
   const now = this.session.now();
-  const count = incomingSyncMessage ? incomingSyncMessage.count : -1;   
+  const count = incomingSyncMessage ? incomingSyncMessage.count : -1;
   const answer = new ControlMessage();
 
   answer.command = 'synchronization';

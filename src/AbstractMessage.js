@@ -1,7 +1,3 @@
-"use strict";
-
-var assert = require('assert');
-
 // A Protocol message interface
 function AbstractMessage() {}
 
@@ -15,7 +11,6 @@ AbstractMessage.prototype.mixin = function copyFrom(data) {
 };
 
 AbstractMessage.prototype.parseBuffer = function parseBuffer(buffer) {
-  assert.ok(Buffer.isBuffer(buffer), 'Argument needs to be a buffer');
   this.buffer = buffer;
   return this;
 };

@@ -1,6 +1,4 @@
 
-'use strict';
-
 var Session         = require('./Session'),
 MdnsService     = require('./mdns'),
 os              = require("os"),
@@ -12,17 +10,12 @@ storageHandler,
 manager = module.exports = new EventEmitter();
 
 MdnsService.on('remoteSessionUp', function(remoteSession) {
-  //if (isNotLocalSession(remoteSession)) {
-  manager.emit('remoteSessionAdded', {remoteSession: remoteSession});
-  //}
-  
-}.bind(this));
+  manager.emit('remoteSessionAdded', {remoteSession: remoteSession});  
+});
 
 MdnsService.on('remoteSessionDown', function(remoteSession) {
-  //if (isNotLocalSession(remoteSession)) {
   manager.emit('remoteSessionRemoved', {remoteSession: remoteSession});
-  //}
-}.bind(this));
+});
 
 function generateRandomInteger(octets) {
   return Math.round(Math.random() * Math.pow(2, 8 * octets));
