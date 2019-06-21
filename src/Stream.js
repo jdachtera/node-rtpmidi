@@ -1,30 +1,27 @@
-"use strict";
+// 'use strict';
 
-var util = require("util"),
-EventEmitter = require('events').EventEmitter,
-ControlMessage = require("./ControlMessage.js"),
-hrtimer = require('./hrtimer'),
-log = require('./log'),
-MidiMessage = require("./MidiMessage.js");
+const util = require("util");
+const EventEmitter = require('events').EventEmitter;
+
+const ControlMessage = require("./ControlMessage.js");
+const hrtimer = require('./hrtimer');
+const log = require('./log');
+const MidiMessage = require("./MidiMessage.js");
 
 // Helper functions
-
 function generateRandomInteger(octets) {
-  return Math.round(Math.random() * Math.pow(2, 8 * octets));
+  return Math.round(Math.random() * (8 * octets ** 2);
 }
 
 function writeUInt64BE(buffer, value) {
-  var str = pad((value).toString(16), 16);	
-  //buffer.writeUInt32BE(parseInt(str.slice(0, 8), 16), 0);
+  const str = pad((value).toString(16), 16);	
   buffer.writeUInt32BE(0, 0);
   buffer.writeUInt32BE(parseInt(str.slice(8), 16), 4);
 }
 
 function readUInt64BE(buffer, i){
-  i=i||0;
+  i = i || 0;
   return buffer.readUInt32BE(i + 4);
-  var str = pad(buffer.readUInt32BE(i).toString(16), 8) + pad(buffer.readUInt32BE(i + 4).toString(16), 8);	
-  return parseInt(str, 16);		
 }
 
 function pad(number, length) {

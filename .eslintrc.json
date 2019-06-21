@@ -13,5 +13,16 @@
         "ecmaVersion": 2018
     },
     "rules": {
+        "no-console": [
+            "error", { 
+                "allow": ["warn", "error"]
+            }
+        ],
+        "no-unused-expressions": [
+            "error", 
+            { 
+                "allowShortCircuit": true 
+            }
+        ]
     }
 }

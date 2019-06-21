@@ -60,34 +60,6 @@ function clear(cb) {
     }
   }
 }
-/*
-function test(impl, i, cb) {
-  var n = now(), c = 0, a = 0, m = 5000;
-  function l() {
-    var nn = now();
-    var nnn = nn-n;
-    a += (nnn);
-    n = nn;
-    
-    if (c < m) {
-      c++;
-      impl(l, i);
-    } else {
-      cb(a/c);
-    }
-    
-  }
-  l();
-}
-
-var i = 0.000;
-test(setTimeout, i, function(result1) {
-  test(timeout, i, function(result2) {
-    console.log(result1, result2);
-  })
-});
-*/
-
 
 exports.setTimeout = timeout;
 exports.clearTimeout = clear;

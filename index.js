@@ -1,10 +1,10 @@
-'use strict'
-
+/* eslint-disable global-require */
 // Backported Buffer functions for node 0.4.x
-var versionParts = process.versions.node.split('.')
+const versionParts = process.versions.node.split('.');
+
 if (versionParts[0] === '0' && versionParts[1] === '4') {
-  console.log('Using node.JS 0.4 compatiblity mode.')
-  require('./src/node_0_4_compatibility')
+  console.warn('Using node.JS 0.4 compatiblity mode.');
+  require('./src/node_0_4_compatibility');
 }
 
 module.exports = {
@@ -18,5 +18,5 @@ module.exports = {
   MTC: require('./src/MTC'),
   MdnsService: require('./src/mdns'),
   log: require('./src/log'),
-  hrtimer: require('./src/hrtimer')
-}
+  hrtimer: require('./src/hrtimer'),
+};
