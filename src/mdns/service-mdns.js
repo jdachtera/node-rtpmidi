@@ -13,12 +13,14 @@ avahi_pub;
 try {
   mdns = require('mdns');
 } catch (e) {
-  console.log('mDNS discovery is not available.');
+  console.error('mDNS discovery is not available.', e.message);
 }
 
 try {
   avahi_pub = require('avahi_pub');
-} catch(e) {}
+} catch(e) {
+  console.error('avahi_pub is not available.', e.message);
+}
 
 
 
