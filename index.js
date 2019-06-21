@@ -10,5 +10,4 @@ module.exports = {
   MTC: require('./src/MTC'),
   MdnsService: require('./src/mdns'),
   log: require('./src/log'),
-  hrtimer: require('./src/hrtimer'),
 };
