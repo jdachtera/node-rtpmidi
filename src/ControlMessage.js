@@ -1,6 +1,7 @@
-const util = require("util");
+/* eslint-disable no-bitwise */
+const util = require('util');
 
-const AbstractMessage = require("./AbstractMessage");
+const AbstractMessage = require('./AbstractMessage');
 
 const byteToCommand = {
   0x494E: 'invitation',
@@ -9,24 +10,27 @@ const byteToCommand = {
   0x4259: 'end',
   0x434B: 'synchronization',
   0x5253: 'receiver_feedback',
-  0x524C: 'bitrate_receive_limit'
+  0x524C: 'bitrate_receive_limit',
 };
 
+// eslint-disable-next-line func-names
 const commandToByte = (function () {
-  var obj = {};
-  for (var key in byteToCommand) {
+  const obj = {};
+  // eslint-disable-next-line no-restricted-syntax
+  for (const key in byteToCommand) {
+    // eslint-disable-next-line no-prototype-builtins
     if (byteToCommand.hasOwnProperty(key)) {
       obj[byteToCommand[key]] = parseInt(key, 10);
     }
   }
   return obj;
-})();
+}());
 
 const flags = {
-  start: 0xFFFF
+  start: 0xFFFF,
 };
 
-function ControlMessage(buffer) {
+function ControlMessage() {
   AbstractMessage.apply(this);
 }
 
@@ -37,8 +41,8 @@ ControlMessage.prototype.isValid = true;
 ControlMessage.prototype.start = flags.start;
 ControlMessage.prototype.version = 2;
 
-ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
-  AbstractMessage.prototype.parseBuffer.apply(this, arguments);
+ControlMessage.prototype.parseBuffer = function parseBuffer(buffer, ...args) {
+  AbstractMessage.prototype.parseBuffer.apply(this, args);
   this.start = buffer.readUInt16BE(0);
   if (this.start !== flags.start) {
     this.isValid = false;
@@ -59,10 +63,11 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
     case 'synchronization':
       this.ssrc = buffer.readUInt32BE(4, 8);
       this.count = buffer.readUInt8(8);
+      // eslint-disable-next-line no-bitwise
       this.padding = (buffer.readUInt8(9) << 0xF0) + buffer.readUInt16BE(10);
-      this.timestamp1 = buffer.slice(12, 20); //[buffer.readUInt32BE(12), buffer.readUInt32BE(16)];
-      this.timestamp2 = buffer.slice(20, 28); //[buffer.readUInt32BE(20), buffer.readUInt32BE(24)];
-      this.timestamp3 = buffer.slice(28, 36); //[buffer.readUInt32BE(28), buffer.readUInt32BE(32)];
+      this.timestamp1 = buffer.slice(12, 20);
+      this.timestamp2 = buffer.slice(20, 28);
+      this.timestamp3 = buffer.slice(28, 36);
       break;
     case 'receiver_feedback':
       this.ssrc = buffer.readUInt32BE(4, 8);
@@ -75,8 +80,8 @@ ControlMessage.prototype.parseBuffer = function parseBuffer(buffer) {
 };
 
 ControlMessage.prototype.generateBuffer = function generateBuffer() {
-  var buffer,
-  commandByte = commandToByte[this.command];
+  let buffer;
+  const commandByte = commandToByte[this.command];
 
   switch (this.command) {
     case 'invitation':
@@ -84,7 +89,7 @@ ControlMessage.prototype.generateBuffer = function generateBuffer() {
     case 'invitation_rejected':
     case 'end':
       this.name = this.name || '';
-      buffer = new Buffer(17 + Buffer.byteLength(this.name, 'utf8'));
+      buffer = Buffer.alloc(17 + Buffer.byteLength(this.name, 'utf8'));
       buffer.writeUInt16BE(this.start, 0);
       buffer.writeUInt16BE(commandByte, 2);
       buffer.writeUInt32BE(this.version, 4);
@@ -96,21 +101,21 @@ ControlMessage.prototype.generateBuffer = function generateBuffer() {
       }
       break;
     case 'synchronization':
-      buffer = new Buffer(36);
+      buffer = Buffer.alloc(36);
       buffer.writeUInt16BE(this.start, 0);
       buffer.writeUInt16BE(commandByte, 2);
       buffer.writeUInt32BE(this.ssrc, 4);
       buffer.writeUInt8(this.count, 8);
       buffer.writeUInt8(this.padding >>> 0xF0, 9);
       buffer.writeUInt16BE(this.padding & 0x00FFFF, 10);
-      
+
       this.timestamp1.copy(buffer, 12);
       this.timestamp2.copy(buffer, 20);
       this.timestamp3.copy(buffer, 28);
-      
+
       break;
     case 'receiver_feedback':
-      buffer = new Buffer(12);
+      buffer = Buffer.alloc(12);
       buffer.writeUInt16BE(this.start, 0);
       buffer.writeUInt16BE(commandByte, 2);
       buffer.writeUInt32BE(this.ssrc, 4);
