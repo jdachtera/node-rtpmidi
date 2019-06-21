@@ -17,3 +17,4 @@ There is also a port of this library to the chrome apps platform: [rtpmidi-chrom
 - [] Migrate local implementation of log() to the debug module
 - [] Migrate to class syntax
 - [] Better setup documentation / cross-platform handling
+- [] Review mdns

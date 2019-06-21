@@ -1,7 +1,6 @@
 /* eslint-disable global-require */
 module.exports = {
   manager: require('./src/manager'),
-  webapi: require('./src/webapi'),
   Session: require('./src/Session'),
   Stream: require('./src/Stream'),
   AbstractMessage: require('./src/AbstractMessage'),

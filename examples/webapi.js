@@ -1,5 +1,5 @@
 module.exports = function(port) {
-  var manager     = require('./manager.js'),
+  var manager     = require('../src/manager.js'),
   sio         = require('socket.io');
   port = port || 8736;
   var api = sio.listen(port);
