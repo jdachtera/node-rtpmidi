@@ -1,30 +1,31 @@
-module.exports = function(port) {
-  var manager     = require('../src/manager.js'),
-  sio         = require('socket.io');
+/* eslint-disable * */
+module.exports = function (port) {
+  let manager = require('../src/manager.js');
+  var sio = require('socket.io');
   port = port || 8736;
-  var api = sio.listen(port);
-  
-  manager.on('sessionAdded', function(event) {
+  let api = sio.listen(port);
+
+  manager.on('sessionAdded', (event) => {
     api.sockets.emit('sessionAdded', event.session.toJSON());
   });
-  
-  manager.on('sessionRemoved', function(event) {
+
+  manager.on('sessionRemoved', (event) => {
     api.sockets.emit('sessionRemoved', event.session.toJSON());
   });
-  
-  manager.on('sessionChanged', function(event) {
+
+  manager.on('sessionChanged', (event) => {
     api.sockets.emit('sessionChanged', event.session.toJSON());
   });
-  
-  manager.on('remoteSessionAdded', function(event) {
+
+  manager.on('remoteSessionAdded', (event) => {
     api.sockets.emit('remoteSessionAdded', event.remoteSession);
   });
-  
-  manager.on('remoteSessionRemoved', function(event) {
+
+  manager.on('remoteSessionRemoved', (event) => {
     api.sockets.emit('remoteSessionRemoved', event.remoteSession);
   });
-  
-  api.sockets.on('connection', function(socket) {
+
+  api.sockets.on('connection', (socket) => {
     
     socket.on('createSession', function(config) {
       manager.createSession(config);
@@ -123,16 +124,15 @@ module.exports = function(port) {
       }
     });
   });
-  
-  api.cleanup = function(callback) {
-    manager.reset(function() {
+
+  api.cleanup = function (callback) {
+    manager.reset(() => {
       manager.stopDiscovery();
       api.server.close();
       callback && callback();
     });
   };
-  
+
   manager.startDiscovery();
   return api;
 };
-
